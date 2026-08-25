@@ -1,0 +1,32 @@
+.placeholder-page {
+    min-height: calc(100vh - 92px);
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    padding: 40px 24px;
+    text-align: center;
+}
+
+.placeholder-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 22px;
+    color: #31845d;
+    border-radius: 15px;
+    background: #dff3e8;
+}
+
+.placeholder-page h1 {
+    margin: 9px 0 8px;
+    color: #19313a;
+    font-size: 34px;
+    letter-spacing: -1px;
+}
+
+.placeholder-page p {
+    margin: 0;
+    color: #78908a;
+    font-size: 14px;
+}

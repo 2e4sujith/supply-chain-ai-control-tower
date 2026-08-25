@@ -1,0 +1,18 @@
+import { Bell, Check, CircleUserRound, Monitor, Server, SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
+import './Settings.css'
+
+const sections = [{ label: 'Profile', icon: CircleUserRound }, { label: 'Notifications', icon: Bell }, { label: 'Display', icon: Monitor }, { label: 'System', icon: Server }, { label: 'API Configuration', icon: SlidersHorizontal }]
+
+function Settings() {
+  const [activeSection, setActiveSection] = useState('Profile')
+  const [saved, setSaved] = useState(false)
+  const [emailAlerts, setEmailAlerts] = useState(true)
+  const [compact, setCompact] = useState(false)
+  const current = sections.find(({ label }) => label === activeSection)
+  const save = () => { setSaved(true); window.setTimeout(() => setSaved(false), 2000) }
+
+  return <div className="settings-page"><section className="page-intro"><div><span className="eyebrow">Workspace preferences</span><h1>Settings</h1><p>Configure your control tower workspace and notification preferences.</p></div><span className="demo-note"><span /> DEMO MODE</span></section><div className="settings-layout"><nav className="settings-nav" aria-label="Settings sections">{sections.map(({ label, icon: Icon }) => <button className={activeSection === label ? 'selected' : ''} onClick={() => setActiveSection(label)} key={label}><Icon size={16} /> {label}</button>)}</nav><section className="settings-panel"><div className="settings-panel-heading"><div><span className="eyebrow">Configuration</span><h2>{current.label}</h2></div><span className="settings-demo">DEMO MODE</span></div>{activeSection === 'Profile' && <div className="settings-content"><div className="profile-block"><CircleUserRound size={48} /><div><strong>Alex Morgan</strong><span>Operations Administrator</span><small>alex.morgan@supplychain.ai</small></div></div><div className="settings-fields"><label>Display name<input defaultValue="Alex Morgan" /></label><label>Workspace<input defaultValue="North America Operations" /></label></div></div>}{activeSection === 'Notifications' && <div className="settings-content"><div className="setting-row"><div><strong>Operational alerts</strong><p>Receive critical shipment and disruption alerts.</p></div><button className={`toggle ${emailAlerts ? 'on' : ''}`} onClick={() => setEmailAlerts(!emailAlerts)} aria-label="Toggle operational alerts"><span /></button></div><div className="setting-row"><div><strong>Daily digest</strong><p>Summary of network health each morning.</p></div><button className="toggle" aria-label="Toggle daily digest"><span /></button></div></div>}{activeSection === 'Display' && <div className="settings-content"><div className="setting-row"><div><strong>Compact data density</strong><p>Show more rows in tables and operational views.</p></div><button className={`toggle ${compact ? 'on' : ''}`} onClick={() => setCompact(!compact)} aria-label="Toggle compact data density"><span /></button></div></div>}{(activeSection === 'System' || activeSection === 'API Configuration') && <div className="settings-content"><div className="system-card"><Server size={19} /><div><strong>{activeSection === 'System' ? 'Demo environment' : 'API connections disabled'}</strong><p>{activeSection === 'System' ? 'Frontend-only workspace with static demonstration data.' : 'External API configuration will be available in a later phase.'}</p></div><Check size={16} /></div></div>}<div className="settings-actions"><span>{saved ? 'Changes saved to demo state.' : 'Changes apply to this session only.'}</span><button onClick={save}>Save changes</button></div></section></div></div>
+}
+
+export default Settings

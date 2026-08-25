@@ -1,0 +1,255 @@
+.settings-page {
+    max-width: 1060px;
+}
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 22px;
+    align-items: start;
+}
+
+.settings-nav {
+    display: grid;
+    gap: 4px;
+}
+
+.settings-nav button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 4px;
+    color: #78908a;
+    background: transparent;
+    text-align: left;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.settings-nav button.selected,
+.settings-nav button:hover {
+    color: #19313a;
+    background: #e4f2e9;
+    font-weight: 700;
+}
+
+.settings-panel {
+    min-height: 430px;
+    padding: 24px;
+    border: 1px solid #dfebe5;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, .8);
+}
+
+.settings-panel-heading {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #edf2ef;
+}
+
+.settings-panel-heading h2 {
+    margin: 6px 0 0;
+    color: #19313a;
+    font-size: 18px;
+}
+
+.settings-demo {
+    padding: 5px 7px;
+    align-self: start;
+    color: #ae6c35;
+    border: 1px solid #f0d5bd;
+    border-radius: 4px;
+    background: #fff5ec;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .6px;
+}
+
+.settings-content {
+    padding-top: 26px;
+}
+
+.profile-block {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 28px;
+    color: #31845d;
+}
+
+.profile-block div {
+    display: grid;
+    gap: 4px;
+}
+
+.profile-block strong {
+    color: #19313a;
+    font-size: 14px;
+}
+
+.profile-block span {
+    color: #52706f;
+    font-size: 11px;
+}
+
+.profile-block small {
+    color: #9aaca7;
+    font-size: 10px;
+}
+
+.settings-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.settings-fields label {
+    display: grid;
+    gap: 6px;
+    color: #607875;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.settings-fields input {
+    height: 35px;
+    padding: 0 9px;
+    border: 1px solid #dfe9e4;
+    border-radius: 4px;
+    color: #19313a;
+    background: #fbfdfc;
+    font-size: 11px;
+    outline: 0;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 17px 0;
+    border-bottom: 1px solid #edf2ef;
+}
+
+.setting-row strong {
+    display: block;
+    color: #29474d;
+    font-size: 11px;
+}
+
+.setting-row p {
+    margin: 4px 0 0;
+    color: #78908a;
+    font-size: 10px;
+}
+
+.toggle {
+    width: 34px;
+    height: 19px;
+    padding: 2px;
+    border: 0;
+    border-radius: 12px;
+    background: #d6e2dc;
+    cursor: pointer;
+}
+
+.toggle span {
+    display: block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .2s ease;
+}
+
+.toggle.on {
+    background: #65ad82;
+}
+
+.toggle.on span {
+    transform: translateX(15px);
+}
+
+.system-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 17px;
+    border-radius: 4px;
+    color: #80b697;
+    background: #f1f8f3;
+}
+
+.system-card div {
+    flex: 1;
+}
+
+.system-card strong {
+    color: #31575a;
+    font-size: 11px;
+}
+
+.system-card p {
+    margin: 4px 0 0;
+    color: #78908a;
+    font-size: 10px;
+}
+
+.system-card>svg:last-child {
+    color: #31845d;
+}
+
+.settings-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 50px;
+    padding-top: 16px;
+    border-top: 1px solid #edf2ef;
+}
+
+.settings-actions span {
+    color: #9aaca7;
+    font-size: 10px;
+}
+
+.settings-actions button {
+    padding: 9px 13px;
+    border: 0;
+    border-radius: 4px;
+    color: #18343a;
+    background: #8ed7b0;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .settings-page {
+        padding: 27px 24px 50px;
+    }
+    .settings-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .settings-nav {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .settings-nav button {
+        padding: 9px;
+        font-size: 10px;
+    }
+    .settings-panel {
+        padding: 17px;
+    }
+    .settings-fields {
+        grid-template-columns: 1fr;
+    }
+    .settings-actions {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 13px;
+    }
+}

@@ -1,0 +1,140 @@
+.insights-page {
+    max-width: 1180px;
+}
+
+.insights-intro {
+    align-items: center;
+}
+
+.insight-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    color: #31845d;
+    border: 1px solid #bde3ca;
+    border-radius: 4px;
+    background: #e7f5ec;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .6px;
+}
+
+.insight-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 15px 18px;
+    color: #31845d;
+    border-left: 3px solid #8ed7b0;
+    border-radius: 4px;
+    background: #e8f5ed;
+}
+
+.insight-banner strong {
+    color: #284f4e;
+    font-size: 12px;
+}
+
+.insight-banner p {
+    margin: 3px 0 0;
+    color: #78908a;
+    font-size: 10px;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.insight-card {
+    min-height: 225px;
+    padding: 21px;
+    border: 1px solid #dfebe5;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, .8);
+}
+
+.insight-icon {
+    width: 35px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 18px;
+    border-radius: 9px;
+}
+
+.insight-icon.red {
+    color: #b6534c;
+    background: #f9e3e0;
+}
+
+.insight-icon.orange {
+    color: #b86a33;
+    background: #f9eadc;
+}
+
+.insight-icon.green {
+    color: #31845d;
+    background: #dff3e8;
+}
+
+.insight-icon.blue {
+    color: #337793;
+    background: #e0f0f4;
+}
+
+.insight-card h2 {
+    margin: 8px 0 7px;
+    color: #19313a;
+    font-size: 18px;
+    letter-spacing: -.5px;
+}
+
+.insight-card>p {
+    max-width: 490px;
+    margin: 0;
+    color: #607875;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.insight-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 23px;
+    padding-top: 14px;
+    border-top: 1px solid #edf2ef;
+}
+
+.insight-card-footer strong {
+    color: #52706f;
+    font-size: 10px;
+}
+
+.insight-card-footer button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    color: #31845d;
+    background: transparent;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 720px) {
+    .insights-page {
+        padding: 27px 24px 50px;
+    }
+    .insights-intro {
+        align-items: flex-start;
+    }
+    .insight-grid {
+        grid-template-columns: 1fr;
+    }
+}

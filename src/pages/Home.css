@@ -1,0 +1,522 @@
+.dashboard-page {
+    padding: 34px 6vw 70px;
+    color: #19313a;
+}
+
+.dashboard-intro {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    margin-bottom: 26px;
+}
+
+.dashboard-intro h1 {
+    margin: 7px 0 5px;
+    color: #19313a;
+    font-size: 30px;
+    letter-spacing: -1.2px;
+    line-height: 1.1;
+}
+
+.dashboard-intro p {
+    margin: 0;
+    color: #78908a;
+    font-size: 13px;
+}
+
+.demo-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+    color: #ae6c35;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .8px;
+}
+
+.demo-note span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #e48d55;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.kpi-card,
+.panel {
+    border: 1px solid #dfebe5;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, .8);
+}
+
+.kpi-card {
+    min-height: 148px;
+    padding: 18px;
+}
+
+.kpi-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 13px;
+    border-radius: 8px;
+}
+
+.kpi-icon.blue {
+    color: #337793;
+    background: #e0f0f4;
+}
+
+.kpi-icon.green {
+    color: #31845d;
+    background: #dff3e8;
+}
+
+.kpi-icon.red {
+    color: #bd594d;
+    background: #f9e4e1;
+}
+
+.kpi-icon.orange {
+    color: #b86a33;
+    background: #f9eadc;
+}
+
+.kpi-label {
+    display: block;
+    color: #78908a;
+    font-size: 11px;
+}
+
+.kpi-card strong {
+    display: block;
+    margin: 2px 0 3px;
+    color: #19313a;
+    font-size: 26px;
+    letter-spacing: -1px;
+}
+
+.kpi-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: #3e956b;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.kpi-detail.down {
+    color: #bd594d;
+}
+
+.kpi-detail.down svg {
+    transform: rotate(90deg);
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: minmax(300px, .85fr) minmax(420px, 1.15fr);
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.panel {
+    padding: 21px;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.panel-heading h2 {
+    margin: 5px 0 0;
+    color: #19313a;
+    font-size: 16px;
+    letter-spacing: -.3px;
+}
+
+.panel-menu,
+.count-badge {
+    color: #78908a;
+    font-size: 10px;
+}
+
+.count-badge {
+    padding: 5px 7px;
+    border-radius: 4px;
+    color: #31845d;
+    background: #e7f5ec;
+    font-weight: 700;
+}
+
+.risk-content {
+    min-height: 185px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 35px;
+}
+
+.risk-donut {
+    width: 142px;
+    height: 142px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: conic-gradient(#77bd91 0 59%, #e4b35e 59% 84%, #e17763 84% 96%, #a94d4d 96% 100%);
+}
+
+.risk-donut::before {
+    content: '';
+    position: absolute;
+    width: 98px;
+    height: 98px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.risk-donut div {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+}
+
+.risk-donut strong {
+    font-size: 25px;
+    letter-spacing: -1px;
+}
+
+.risk-donut span {
+    color: #78908a;
+    font-size: 10px;
+}
+
+.risk-legend {
+    min-width: 125px;
+    display: grid;
+    gap: 13px;
+}
+
+.legend-row {
+    display: grid;
+    grid-template-columns: 9px 1fr auto 28px;
+    align-items: center;
+    gap: 7px;
+    color: #526c6b;
+    font-size: 11px;
+}
+
+.legend-row strong {
+    color: #19313a;
+    font-size: 11px;
+}
+
+.legend-row small {
+    color: #9aaca7;
+    text-align: right;
+    font-size: 10px;
+}
+
+.legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.legend-dot.low {
+    background: #77bd91;
+}
+
+.legend-dot.medium {
+    background: #e4b35e;
+}
+
+.legend-dot.high {
+    background: #e17763;
+}
+
+.legend-dot.critical {
+    background: #a94d4d;
+}
+
+.activity-chart {
+    height: 210px;
+    position: relative;
+    margin-top: 22px;
+    padding: 0 5px 25px;
+}
+
+.chart-gridlines {
+    position: absolute;
+    inset: 0 5px 27px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.chart-gridlines span {
+    border-top: 1px dashed #dfe9e4;
+}
+
+.bars {
+    height: 100%;
+    display: flex;
+    align-items: end;
+    justify-content: space-around;
+    gap: 10px;
+    position: relative;
+    padding: 0 5px 27px;
+    border-bottom: 1px solid #dfe9e4;
+}
+
+.bar {
+    width: 100%;
+    max-width: 25px;
+    min-height: 12px;
+    border-radius: 3px 3px 0 0;
+    background: #80c39a;
+    opacity: .9;
+}
+
+.bar:nth-child(2n) {
+    background: #4c9aa0;
+}
+
+.chart-labels {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    color: #9aaca7;
+    font-size: 9px;
+}
+
+.lower-grid {
+    display: grid;
+    grid-template-columns: minmax(560px, 1.6fr) minmax(280px, .7fr);
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.table-panel {
+    min-width: 0;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    min-width: 650px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th {
+    padding: 0 10px 11px;
+    color: #9aaca7;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+td {
+    padding: 12px 10px;
+    border-top: 1px solid #edf2ef;
+    color: #607875;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+td strong {
+    color: #19313a;
+    font-size: 11px;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.risk-badge.critical {
+    color: #a64b4b;
+    background: #f9e3e0;
+}
+
+.risk-badge.high {
+    color: #b46535;
+    background: #faeadc;
+}
+
+.status-text {
+    color: #52706f;
+}
+
+.alerts-list {
+    display: grid;
+    gap: 18px;
+    margin-top: 21px;
+}
+
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.alert-icon {
+    width: 27px;
+    height: 27px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+}
+
+.alert-icon.critical {
+    color: #b6534c;
+    background: #f9e3e0;
+}
+
+.alert-icon.warning {
+    color: #b47732;
+    background: #faeddc;
+}
+
+.alert-icon.info {
+    color: #337793;
+    background: #e0f0f4;
+}
+
+.alert-item strong {
+    display: block;
+    color: #28454c;
+    font-size: 11px;
+}
+
+.alert-item p {
+    margin: 3px 0 4px;
+    color: #78908a;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.alert-item small {
+    color: #a2b2ad;
+    font-size: 9px;
+}
+
+.loading-state {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 22px;
+    padding-top: 13px;
+    border-top: 1px solid #edf2ef;
+    color: #9aaca7;
+    font-size: 9px;
+}
+
+.loading-bar {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #8ed7b0;
+    box-shadow: 0 0 0 4px rgba(142, 215, 176, .14);
+    animation: pulse 1.8s infinite;
+}
+
+.spin-slow {
+    color: #9aaca7;
+    animation: spin 3s linear infinite;
+}
+
+@keyframes pulse {
+    50% {
+        opacity: .35;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 1050px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .chart-grid,
+    .lower-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .dashboard-page {
+        padding: 27px 24px 50px;
+    }
+    .dashboard-intro {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .dashboard-intro h1 {
+        font-size: 26px;
+    }
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .kpi-card {
+        padding: 14px;
+        min-height: 133px;
+    }
+    .kpi-card strong {
+        font-size: 23px;
+    }
+    .chart-grid,
+    .lower-grid {
+        gap: 10px;
+    }
+    .panel {
+        padding: 16px;
+    }
+    .risk-content {
+        gap: 15px;
+    }
+    .risk-donut {
+        width: 122px;
+        height: 122px;
+    }
+    .risk-donut::before {
+        width: 84px;
+        height: 84px;
+    }
+    .risk-legend {
+        min-width: 110px;
+    }
+    .activity-chart {
+        height: 185px;
+    }
+}
