@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: supply-chain-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgre1}
+      POSTGRES_DB: ${POSTGRES_DB:-supply_chain_ai}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-supply_chain_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: supply-chain-redis-prod
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supply-chain-backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgre1}@postgres:5432/${POSTGRES_DB:-supply_chain_ai}
+      REDIS_ENABLED: "${REDIS_ENABLED:-true}"
+      REDIS_URL: redis://redis:6379/0
+      REDIS_SOCKET_TIMEOUT: "${REDIS_SOCKET_TIMEOUT:-1.5}"
+      REDIS_DEFAULT_TTL: "${REDIS_DEFAULT_TTL:-300}"
+      REDIS_TELEMETRY_TTL: "${REDIS_TELEMETRY_TTL:-60}"
+      REDIS_ROUTE_CACHE_TTL: "${REDIS_ROUTE_CACHE_TTL:-120}"
+      ENABLE_MOCK_FALLBACK: "${ENABLE_MOCK_FALLBACK:-true}"
+      EXTERNAL_DATA_TIMEOUT_SECONDS: "${EXTERNAL_DATA_TIMEOUT_SECONDS:-5.0}"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health/readiness', timeout=3).getcode() == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: supply-chain-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

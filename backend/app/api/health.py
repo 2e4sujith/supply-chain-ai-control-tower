@@ -30,6 +30,21 @@ def database_health() -> dict[str, str]:
     return {"status": "healthy", "database": "connected"}
 
 
+@router.get("/redis", summary="Check Redis cache connectivity and metrics")
+def redis_health() -> dict:
+    """Check Redis server connectivity, hit/miss metrics, and active fallback status."""
+    try:
+        from app.core.config import redis_cache
+        return redis_cache.get_status()
+    except Exception as e:
+        return {
+            "status": "unavailable (fallback active)",
+            "backend": "in_memory_fallback",
+            "redis_enabled": False,
+            "error": str(e),
+        }
+
+
 @router.get("/readiness", summary="Check application dependency readiness")
 def readiness_check() -> dict:
     """Verify that all core subsystems (PostgreSQL, ML model, NetworkX graph) are ready to serve requests."""
@@ -53,7 +68,6 @@ def readiness_check() -> dict:
         logger.warning("Readiness probe ML check failed: %s", e)
         ml_ready = False
 
-
     # 3. Route Network Topology
     graph_ready = False
     node_count = 0
@@ -75,6 +89,20 @@ def readiness_check() -> dict:
     except Exception:
         providers_active = 0
 
+    # 5. Redis Caching Layer (Optional - has automatic in-memory fallback, does not fail overall readiness)
+    redis_info = {"status": "operational", "backend": "in_memory_fallback", "connected": False}
+    try:
+        from app.core.config import redis_cache
+        r_stat = redis_cache.get_status()
+        redis_info = {
+            "status": "operational" if (r_stat["is_connected"] or r_stat["backend"] == "in_memory_fallback") else "degraded",
+            "backend": r_stat["backend"],
+            "connected": r_stat["is_connected"],
+            "hit_rate_pct": r_stat["hit_rate_pct"],
+        }
+    except Exception:
+        pass
+
     all_ready = db_healthy and ml_ready and graph_ready
 
     payload = {
@@ -85,8 +113,10 @@ def readiness_check() -> dict:
             "ml_model": {"status": "loaded" if ml_ready else "unavailable", "model": "XGBoost", "version": "v1.0"},
             "routing_graph": {"status": "ready" if graph_ready else "unavailable", "engine": "NetworkX", "nodes": node_count, "edges": edge_count},
             "telemetry_providers": {"status": telemetry_status, "providers_active": providers_active, "fallback_enabled": settings.ENABLE_MOCK_FALLBACK},
+            "redis_cache": redis_info,
         },
     }
+
 
     if not all_ready:
         return JSONResponse(

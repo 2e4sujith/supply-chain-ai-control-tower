@@ -25,13 +25,34 @@ class AlertService:
     def create_alert(self, alert: AlertCreate) -> dict | None:
         if alert_repository.get(alert.alert_id):
             return None
-        return alert_repository.create(alert)
+        created = alert_repository.create(alert)
+        if created:
+            try:
+                from app.api import ws_manager
+                ws_manager.publish_event("alert.created", created)
+            except Exception:
+                pass
+        return created
 
     def mark_read(self, alert_id: str) -> dict | None:
-        return alert_repository.mark_read(alert_id)
+        updated = alert_repository.mark_read(alert_id)
+        if updated:
+            try:
+                from app.api import ws_manager
+                ws_manager.publish_event("alert.updated", updated)
+            except Exception:
+                pass
+        return updated
 
     def delete_alert(self, alert_id: str) -> bool:
-        return alert_repository.delete(alert_id)
+        success = alert_repository.delete(alert_id)
+        if success:
+            try:
+                from app.api import ws_manager
+                ws_manager.publish_event("alert.deleted", {"alert_id": alert_id})
+            except Exception:
+                pass
+        return success
 
 
 alert_service = AlertService()
@@ -1119,7 +1140,7 @@ import time
 
 
 class ExternalDisruptionService:
-    """Central service managing real-time and mock disruption telemetry providers with in-memory TTL caching."""
+    """Central service managing real-time and mock disruption telemetry providers with Redis and In-Memory TTL caching."""
 
     def __init__(self, cache_ttl_seconds: float = 60.0):
         weather_key = os.getenv("WEATHER_API_KEY", "")
@@ -1134,28 +1155,32 @@ class ExternalDisruptionService:
             self.port_provider,
             self.traffic_provider,
         ]
-        self._cache_ttl = cache_ttl_seconds
-        self._location_cache: dict[str, tuple[float, list[NormalizedDisruptionEvent]]] = {}
-        self._active_cache: Optional[tuple[float, list[NormalizedDisruptionEvent]]] = None
+        self._cache_ttl = int(os.getenv("REDIS_TELEMETRY_TTL", "60"))
 
     def clear_cache(self) -> None:
-        """Clear all in-memory telemetry caches."""
-        self._location_cache.clear()
-        self._active_cache = None
+        """Clear all disruption telemetry caches."""
+        try:
+            from app.core.config import redis_cache
+            redis_cache.flush(prefix="telemetry:")
+        except Exception:
+            pass
 
     def get_location_disruptions(
         self,
         location: str,
         disruption_type: Optional[DisruptionType] = None,
     ) -> list[NormalizedDisruptionEvent]:
-        """Query all providers for active disruptions affecting a given supply chain location with TTL cache."""
-        cache_key = f"{location.lower()}_{disruption_type.value if disruption_type else 'ALL'}"
-        now_ts = time.time()
+        """Query all providers for active disruptions affecting a given supply chain location with Redis / TTL cache."""
+        type_str = disruption_type.value if disruption_type else "ALL"
+        cache_key = f"telemetry:loc:{location.lower()}:{type_str}"
 
-        if cache_key in self._location_cache:
-            ts, cached_events = self._location_cache[cache_key]
-            if now_ts - ts < self._cache_ttl:
-                return cached_events
+        try:
+            from app.core.config import redis_cache
+            cached = redis_cache.get(cache_key)
+            if cached and isinstance(cached, list):
+                return [NormalizedDisruptionEvent.model_validate(item) for item in cached]
+        except Exception:
+            pass
 
         events: list[NormalizedDisruptionEvent] = []
         for provider in self.providers:
@@ -1168,24 +1193,54 @@ class ExternalDisruptionService:
             except Exception:
                 pass
 
-        self._location_cache[cache_key] = (now_ts, events)
+        try:
+            from app.core.config import redis_cache
+            redis_cache.set(cache_key, [e.model_dump(mode="json") for e in events], ttl=self._cache_ttl)
+        except Exception:
+            pass
+
+        if events:
+            try:
+                from app.api import ws_manager
+                for ev in events:
+                    ws_manager.publish_event("disruption.created", ev.model_dump(mode="json"))
+            except Exception:
+                pass
+
         return events
+
 
     def get_corridor_disruptions(
         self,
         origin: str,
         destination: str,
     ) -> list[NormalizedDisruptionEvent]:
-        """Aggregate disruptions across origin, transit waypoints, and destination."""
+        """Aggregate disruptions across origin, transit waypoints, and destination with caching."""
+        cache_key = f"telemetry:corridor:{origin.lower()}:{destination.lower()}"
+        try:
+            from app.core.config import redis_cache
+            cached = redis_cache.get(cache_key)
+            if cached and isinstance(cached, list):
+                return [NormalizedDisruptionEvent.model_validate(item) for item in cached]
+        except Exception:
+            pass
+
         orig_events = self.get_location_disruptions(origin)
         dest_events = self.get_location_disruptions(destination)
-        
+
         seen_ids = set()
         combined: list[NormalizedDisruptionEvent] = []
         for ev in orig_events + dest_events:
             if ev.event_id not in seen_ids:
                 seen_ids.add(ev.event_id)
                 combined.append(ev)
+
+        try:
+            from app.core.config import redis_cache
+            redis_cache.set(cache_key, [e.model_dump(mode="json") for e in combined], ttl=self._cache_ttl)
+        except Exception:
+            pass
+
         return combined
 
     def _fetch_all_active(self) -> list[NormalizedDisruptionEvent]:
@@ -1203,18 +1258,25 @@ class ExternalDisruptionService:
         self,
         min_severity: Optional[DisruptionSeverity] = None,
     ) -> list[NormalizedDisruptionEvent]:
-        """Retrieve all currently tracked global disruption events with in-memory TTL caching."""
-        now_ts = time.time()
-        if self._active_cache is not None:
-            ts, cached_events = self._active_cache
-            if now_ts - ts < self._cache_ttl:
-                events = cached_events
-            else:
-                events = self._fetch_all_active()
-                self._active_cache = (now_ts, events)
-        else:
+        """Retrieve all currently tracked global disruption events with Redis caching."""
+        cache_key = "telemetry:all_active"
+        events: list[NormalizedDisruptionEvent] = []
+
+        try:
+            from app.core.config import redis_cache
+            cached = redis_cache.get(cache_key)
+            if cached and isinstance(cached, list):
+                events = [NormalizedDisruptionEvent.model_validate(item) for item in cached]
+        except Exception:
+            pass
+
+        if not events:
             events = self._fetch_all_active()
-            self._active_cache = (now_ts, events)
+            try:
+                from app.core.config import redis_cache
+                redis_cache.set(cache_key, [e.model_dump(mode="json") for e in events], ttl=self._cache_ttl)
+            except Exception:
+                pass
 
         if min_severity:
             severity_order = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
@@ -1222,6 +1284,7 @@ class ExternalDisruptionService:
             events = [e for e in events if severity_order.get(e.severity.value, 1) >= min_lvl]
 
         return events
+
 
     def get_providers_health(self) -> list[ProviderHealthResponse]:
         """Return connectivity and configuration health status for all integrated providers."""

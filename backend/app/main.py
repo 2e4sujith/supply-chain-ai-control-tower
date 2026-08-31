@@ -11,9 +11,10 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import alerts, analytics, health as health_api, predictions, routes, shipments
+from app.api import alerts, analytics, health as health_api, predictions, routes, settings as settings_api, shipments, websocket_router
 from app.core.database import Base, engine, settings, metrics_tracker, audit_logger, request_id_ctx
-from app.models import Alert, DisruptionPrediction, Shipment  # noqa: F401
+from app.models import Alert, DisruptionPrediction, Shipment, UserSettings  # noqa: F401
+
 from app.repositories.shipment_repository import shipment_repository
 from app.repositories.alert_repository import alert_repository
 
@@ -76,8 +77,18 @@ async def correlation_and_observability_middleware(request: Request, call_next):
         duration_ms = (time.time() - t0) * 1000.0
         response.headers["X-Request-ID"] = req_id
         
+        # Production Security Hardening Headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+        if settings.ENVIRONMENT == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
         # Track metrics
         metrics_tracker.record_request(request.method, request.url.path, response.status_code, duration_ms)
+
         
         logger.info(
             "[%s] %s %s -> Status %s (%.2f ms)",
@@ -181,6 +192,9 @@ app.include_router(alerts.disruptions_router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(predictions.router, prefix="/api")
 app.include_router(routes.router, prefix="/api")
+app.include_router(settings_api.router, prefix="/api")
+app.include_router(websocket_router)
+
 
 
 @app.on_event("startup")

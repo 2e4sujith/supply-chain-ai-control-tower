@@ -163,6 +163,21 @@ class RiskService:
                 except Exception:
                     pass
 
+                # Broadcast WebSocket risk.updated event
+                try:
+                    from app.api import ws_manager
+                    ws_manager.publish_event("risk.updated", {
+                        "shipment_id": resolved_shipment_id,
+                        "disruption_probability": explanation["predicted_probability"],
+                        "risk_score": explanation["risk_score"],
+                        "risk_level": explanation["risk_level"],
+                        "top_risk_factors": [f.model_dump() for f in top_risk_factors],
+                        "model": "XGBoost",
+                    })
+                except Exception:
+                    pass
+
+
                 return RiskPredictionResponse(
                     shipment_id=resolved_shipment_id,
                     disruption_probability=explanation["predicted_probability"],

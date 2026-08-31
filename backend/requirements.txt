@@ -11,4 +11,5 @@ xgboost
 joblib
 shap
 networkx
+redis>=5.0.0
 

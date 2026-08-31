@@ -33,10 +33,11 @@ class Settings(BaseModel):
         origin.strip()
         for origin in os.getenv(
             "CORS_ORIGINS",
-            os.getenv("FRONTEND_URL", "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000")
+            os.getenv("FRONTEND_URL", "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:3000")
         ).split(",")
         if origin.strip()
     ])
+
 
     # Network / Provider Timeouts
     TIMEOUT_SECONDS: float = float(os.getenv("EXTERNAL_DATA_TIMEOUT_SECONDS", "5.0"))
@@ -55,6 +56,18 @@ class Settings(BaseModel):
     TRAFFIC_API_KEY: Optional[str] = os.getenv("TRAFFIC_API_KEY")
     TRAFFIC_API_URL: str = os.getenv("TRAFFIC_API_URL", "https://api.openfreight.org/v1")
 
+    # Redis Configuration
+    REDIS_ENABLED: bool = os.getenv("REDIS_ENABLED", "true").lower() in ["true", "1", "yes"]
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD", None)
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_SOCKET_TIMEOUT: float = float(os.getenv("REDIS_SOCKET_TIMEOUT", "1.5"))
+    REDIS_DEFAULT_TTL: int = int(os.getenv("REDIS_DEFAULT_TTL", "300"))
+    REDIS_TELEMETRY_TTL: int = int(os.getenv("REDIS_TELEMETRY_TTL", "60"))
+    REDIS_ROUTE_CACHE_TTL: int = int(os.getenv("REDIS_ROUTE_CACHE_TTL", "120"))
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
@@ -68,6 +81,19 @@ class Settings(BaseModel):
             return self.DATABASE_URL
         except Exception:
             return "postgresql://***:***@localhost:5432/supply_chain_ai"
+
+    def get_masked_redis_url(self) -> str:
+        """Return Redis connection URL with password safely masked."""
+        try:
+            if not self.REDIS_URL:
+                return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            parsed = urlparse(self.REDIS_URL)
+            if parsed.password:
+                masked_netloc = f":*****@{parsed.hostname}:{parsed.port}"
+                return parsed._replace(netloc=masked_netloc).geturl()
+            return self.REDIS_URL
+        except Exception:
+            return "redis://***@localhost:6379/0"
 
     def get_safe_system_config(self) -> dict:
         """Return safe operational configuration metadata with zero exposed secrets."""
@@ -100,15 +126,37 @@ class Settings(BaseModel):
                 "configured": bool(self.DATABASE_URL),
                 "masked_url": self.get_masked_database_url(),
             },
+            "redis": {
+                "enabled": self.REDIS_ENABLED,
+                "configured": bool(self.REDIS_URL or self.REDIS_HOST),
+                "masked_url": self.get_masked_redis_url(),
+                "default_ttl_seconds": self.REDIS_DEFAULT_TTL,
+                "telemetry_ttl_seconds": self.REDIS_TELEMETRY_TTL,
+                "route_cache_ttl_seconds": self.REDIS_ROUTE_CACHE_TTL,
+            },
         }
+
 
 
 settings = Settings()
 
-DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+DATABASE_URL = (
+    settings.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+    if settings.DATABASE_URL.startswith("postgresql://")
+    else settings.DATABASE_URL
+)
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=1800,
+    pool_timeout=30,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
 
 
 class Base(DeclarativeBase):

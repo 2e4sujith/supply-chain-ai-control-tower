@@ -929,9 +929,21 @@ class RouteService:
         avoid_nodes: Optional[list[str]] = None,
         ml_risk_score: Optional[int] = None,
     ) -> dict:
-        """Calculate the shortest/optimal route directly between any two locations with real-time disruption awareness."""
+        """Calculate the shortest/optimal route directly between any two locations with real-time disruption awareness and Redis caching."""
         import time
         t0 = time.time()
+
+        # Check route cache
+        avoid_str = ",".join(sorted(avoid_nodes or []))
+        cache_key = f"route:opt:{origin.lower()}:{destination.lower()}:{criterion}:{ml_risk_score}:{avoid_str}"
+        try:
+            from app.core.config import redis_cache
+            cached_route = redis_cache.get(cache_key)
+            if cached_route and isinstance(cached_route, dict):
+                return cached_route
+        except Exception:
+            pass
+
         try:
             res = self.network.dijkstra_shortest_path(
                 origin=origin,
@@ -942,6 +954,15 @@ class RouteService:
                 use_realtime_disruptions=True,
             )
             duration_ms = (time.time() - t0) * 1000.0
+
+            # Store in cache
+            try:
+                from app.core.config import redis_cache
+                route_ttl = int(os.getenv("REDIS_ROUTE_CACHE_TTL", "120"))
+                redis_cache.set(cache_key, res, ttl=route_ttl)
+            except Exception:
+                pass
+
             try:
                 from app.core.database import audit_logger, metrics_tracker
                 metrics_tracker.record_routing(criterion=criterion, success=True, duration_ms=duration_ms)
@@ -971,4 +992,5 @@ class RouteService:
 
 
 route_service = RouteService()
+
 

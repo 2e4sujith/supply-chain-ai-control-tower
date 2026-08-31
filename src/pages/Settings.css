@@ -201,29 +201,203 @@
     color: #31845d;
 }
 
+.settings-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 11px;
+    animation: fadeIn .2s ease-in;
+}
+
+.settings-toast.success {
+    color: #216e45;
+    background: #e6f6ec;
+    border: 1px solid #b5e4c6;
+}
+
+.settings-toast span {
+    flex: 1;
+    font-weight: 600;
+}
+
+.settings-toast button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.theme-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #65ad82;
+    background: #18343a;
+}
+
+.system-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.system-stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #dfe9e4;
+    border-radius: 4px;
+    background: #fbfdfc;
+}
+
+.stat-icon {
+    margin-top: 2px;
+}
+
+.stat-icon.green { color: #31845d; }
+.stat-icon.orange { color: #d97706; }
+.stat-icon.blue { color: #2563eb; }
+.stat-icon.purple { color: #9333ea; }
+
+.stat-label {
+    display: block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #78908a;
+    margin-bottom: 2px;
+}
+
+.system-stat-card strong {
+    display: block;
+    font-size: 12px;
+    color: #19313a;
+}
+
+.system-stat-card small {
+    display: block;
+    font-size: 9px;
+    color: #9aaca7;
+    margin-top: 3px;
+    word-break: break-all;
+}
+
+.api-providers-list {
+    display: grid;
+    gap: 12px;
+}
+
+.api-provider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #dfe9e4;
+    border-radius: 4px;
+    background: #fbfdfc;
+}
+
+.provider-icon {
+    color: #31845d;
+}
+
+.provider-info {
+    flex: 1;
+}
+
+.provider-info strong {
+    display: block;
+    font-size: 11px;
+    color: #19313a;
+}
+
+.provider-info p {
+    margin: 3px 0 0;
+    font-size: 10px;
+    color: #78908a;
+}
+
+.provider-info small {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    color: #52706f;
+}
+
+.provider-status.live {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #216e45;
+    background: #e6f6ec;
+    border: 1px solid #b5e4c6;
+}
+
+/* Bottom Action Row: Text on Left, Button on Right */
 .settings-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 50px;
-    padding-top: 16px;
+    margin-top: 36px;
+    padding-top: 20px;
     border-top: 1px solid #edf2ef;
+    min-height: 52px;
+    gap: 20px;
 }
 
-.settings-actions span {
-    color: #9aaca7;
-    font-size: 10px;
+.settings-persist-note {
+    color: #78908a;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
 }
 
-.settings-actions button {
-    padding: 9px 13px;
+.primary-save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 18px;
     border: 0;
     border-radius: 4px;
     color: #18343a;
     background: #8ed7b0;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
+    transition: background .2s ease, box-shadow .2s ease;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.primary-save-btn:hover:not(:disabled) {
+    background: #77cda1;
+    box-shadow: 0 2px 6px rgba(49, 132, 93, 0.15);
+}
+
+.primary-save-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.settings-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 200px;
+    color: #78908a;
+    font-size: 12px;
 }
 
 @media (max-width: 720px) {
@@ -244,12 +418,16 @@
     .settings-panel {
         padding: 17px;
     }
-    .settings-fields {
+    .settings-fields, .system-grid {
         grid-template-columns: 1fr;
     }
     .settings-actions {
         align-items: flex-start;
         flex-direction: column;
-        gap: 13px;
+        gap: 14px;
+    }
+    .primary-save-btn {
+        margin-left: 0;
+        width: 100%;
     }
 }
