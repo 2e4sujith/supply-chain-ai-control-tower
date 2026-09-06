@@ -62,8 +62,9 @@ class RiskPredictionResponse(BaseModel):
     protective_factors: list[FactorDetail] = []
     factors: list[RiskFactor] = []  # For backward-compatible clients
     model: str = "XGBoost"
-    model_name: str = "XGBoost (Disruption Risk v1.0)"
+    model_name: str = "XGBoost (DataCo Disruption Risk v2.0)"
     base_value: Optional[float] = None
+
     shap_values: Optional[dict[str, float]] = None
 
     # Phase 7: Real-Time Disruption Metadata

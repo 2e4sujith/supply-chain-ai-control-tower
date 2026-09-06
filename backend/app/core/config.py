@@ -29,3 +29,4 @@ class ExternalDataSettings(BaseModel):
 
 
 settings = ExternalDataSettings()
+from app.core.redis_client import redis_cache

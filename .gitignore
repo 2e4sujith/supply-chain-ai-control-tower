@@ -26,6 +26,11 @@ env/
 venv/
 .pytest_cache/
 
+# Large Datasets & Raw Data
+backend/data/raw/*.csv
+backend/data/*.csv
+*.csv
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -34,6 +39,5 @@ venv/
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
-
+powershell.bat

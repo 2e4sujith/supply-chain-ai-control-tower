@@ -1,7 +1,7 @@
 """
 SHAP Explainability Module for Supply Chain AI Disruption Risk Model.
 
-Implements exact TreeSHAP attribution for the trained XGBoost model to explain
+Implements exact TreeSHAP attribution for the DataCo-trained XGBoost model to explain
 individual shipment disruption risk predictions, identifying top positive risk
 drivers and top negative/protective factors.
 """
@@ -11,73 +11,77 @@ import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-try:
-    import shap
-    import numpy as np
-    HAS_SHAP_PKG = True
-except ImportError:
-    HAS_SHAP_PKG = False
-
 CATEGORICAL_FEATURES = [
-    "transport_mode",
-    "origin_region",
-    "destination_region",
-    "priority_level",
+    "Shipping Mode",
+    "Type",
+    "Customer Segment",
+    "Market",
+    "Order Region",
+    "Department Name",
 ]
 
 NUMERICAL_FEATURES = [
-    "route_distance_km",
-    "planned_duration_hours",
-    "elapsed_transit_hours",
-    "transit_progress_pct",
-    "carrier_reliability_score",
-    "origin_port_congestion_index",
-    "dest_port_congestion_index",
-    "weather_severity_index",
-    "customs_inspection_risk",
-    "seasonal_disruption_factor",
+    "Days for shipment (scheduled)",
+    "Order Item Product Price",
+    "Order Item Quantity",
+    "Order Item Discount Rate",
+    "Order Item Discount",
+    "Order Item Total",
+    "Order Profit Per Order",
+    "Order Item Profit Ratio",
+    "Latitude",
+    "Longitude",
+    "order_hour",
+    "order_dayofweek",
+    "order_month",
 ]
 
 FEATURE_DISPLAY_NAMES = {
-    "transport_mode": "Transport Mode",
-    "origin_region": "Origin Region",
-    "destination_region": "Destination Region",
-    "priority_level": "Priority Tier",
-    "route_distance_km": "Route Distance (km)",
-    "planned_duration_hours": "Planned Transit Duration (hrs)",
-    "elapsed_transit_hours": "Elapsed Transit Time (hrs)",
-    "transit_progress_pct": "Transit Progress",
-    "carrier_reliability_score": "Carrier Reliability Score",
-    "origin_port_congestion_index": "Origin Port Congestion Index",
-    "dest_port_congestion_index": "Destination Port Congestion Index",
-    "weather_severity_index": "Weather Severity Index",
-    "customs_inspection_risk": "Customs Hold Risk",
-    "seasonal_disruption_factor": "Seasonal Congestion Factor",
+    "Shipping Mode": "Shipping Mode",
+    "Type": "Payment Type",
+    "Customer Segment": "Customer Segment",
+    "Market": "Destination Market",
+    "Order Region": "Order Region",
+    "Department Name": "Product Department",
+    "Days for shipment (scheduled)": "Scheduled Shipping SLA (Days)",
+    "Order Item Product Price": "Item Unit Price ($)",
+    "Order Item Quantity": "Item Quantity",
+    "Order Item Discount Rate": "Discount Rate",
+    "Order Item Discount": "Discount Amount ($)",
+    "Order Item Total": "Order Total ($)",
+    "Order Profit Per Order": "Order Profit ($)",
+    "Order Item Profit Ratio": "Profit Ratio",
+    "Latitude": "Destination Latitude",
+    "Longitude": "Destination Longitude",
+    "order_hour": "Order Placement Hour",
+    "order_dayofweek": "Order Day of Week",
+    "order_month": "Order Month",
 }
 
 
 def _get_factor_description(feature: str, value: Any, shap_val: float) -> str:
     is_risk = shap_val > 0
-    if feature == "weather_severity_index":
-        return f"Corridor meteorological risk index is {value:.1f}/100, {'intensifying transit hazard' if is_risk else 'indicating benign weather'}."
-    elif feature == "carrier_reliability_score":
-        return f"Historical carrier on-time rating is {value:.1%}, {'lowering schedule confidence' if is_risk else 'providing strong operational reliability'}."
-    elif feature == "origin_port_congestion_index":
-        return f"Origin departure hub dwell index is {value:.1f}/100, {'causing terminal bottleneck' if is_risk else 'operating at normal throughput'}."
-    elif feature == "dest_port_congestion_index":
-        return f"Receiving destination terminal index is {value:.1f}/100, {'creating discharge delays' if is_risk else 'ensuring swift clearance'}."
-    elif feature == "customs_inspection_risk":
-        return f"Border compliance audit probability is {value:.1%}, {'elevating hold likelihood' if is_risk else 'posing low regulatory risk'}."
-    elif feature == "seasonal_disruption_factor":
-        return f"Corridor seasonal peak pressure is {value:.1%}, {'straining logistics capacity' if is_risk else 'operating in off-peak conditions'}."
-    elif feature == "route_distance_km":
-        return f"Physical corridor length of {value:,.1f} km {'increases exposure to multi-leg disruption' if is_risk else 'minimizes cumulative delay exposure'}."
-    elif feature == "transport_mode":
-        return f"{value} mode freight transit dynamics {'elevate delay sensitivity' if is_risk else 'maintain stable transit schedule'}."
-    elif feature == "priority_level":
-        return f"{value} priority order profile {'imposes strict SLA tolerance' if is_risk else 'allows standard buffer management'}."
-    elif feature == "transit_progress_pct":
-        return f"Shipment is {value:.1%} complete, {'leaving extended remaining transit exposure' if is_risk else 'approaching final delivery stage'}."
+    if feature == "Days for shipment (scheduled)":
+        val_str = f"{value:.0f} days" if isinstance(value, (int, float)) else str(value)
+        return f"Scheduled delivery window is {val_str}, {'tightening delivery SLA margin' if is_risk else 'providing ample buffer time'}."
+    elif feature == "Shipping Mode":
+        return f"{value} shipping tier {'increases exposure to transit variance' if is_risk else 'ensures prioritized transit lane routing'}."
+    elif feature == "Order Region":
+        return f"Destination region ({value}) {'experiences active corridor dwell times' if is_risk else 'operates with stable delivery clearance'}."
+    elif feature == "Market":
+        return f"Market sector ({value}) {'has higher historical delivery volatility' if is_risk else 'maintains high on-time fulfillment rates'}."
+    elif feature == "Department Name":
+        return f"Product category ({value}) {'requires specialized handling delays' if is_risk else 'benefits from standard automated fulfillment'}."
+    elif feature == "Order Item Total":
+        val_str = f"${value:,.2f}" if isinstance(value, (int, float)) else str(value)
+        return f"Consolidated order value is {val_str}, {'influencing high-priority sorting' if is_risk else 'within standard fulfillment batch'}."
+    elif feature == "Order Item Discount Rate":
+        val_str = f"{value:.1%}" if isinstance(value, (int, float)) else str(value)
+        return f"Order promotional discount of {val_str} {'correlates with peak seasonal demand surges' if is_risk else 'reflects standard baseline pricing'}."
+    elif feature == "Customer Segment":
+        return f"{value} customer order profile {'imposes strict delivery expectations' if is_risk else 'follows flexible delivery window'}."
+    elif feature == "Type":
+        return f"{value} transaction verification {'adds order clearance latency' if is_risk else 'provides instantaneous order release'}."
     return f"{FEATURE_DISPLAY_NAMES.get(feature, feature)} ({value}) {'increases' if is_risk else 'decreases'} disruption probability."
 
 
@@ -92,11 +96,13 @@ class Preprocessor:
         vec = []
         for cat in CATEGORICAL_FEATURES:
             val = str(record.get(cat, ""))
-            for cat_val in self.cat_categories[cat]:
+            for cat_val in self.cat_categories.get(cat, []):
                 vec.append(1.0 if val == cat_val else 0.0)
         for num in NUMERICAL_FEATURES:
-            val = float(record.get(num, self.num_means[num]))
-            norm_val = (val - self.num_means[num]) / self.num_stds[num]
+            mean = self.num_means.get(num, 0.0)
+            std = self.num_stds.get(num, 1.0)
+            val = float(record.get(num, mean))
+            norm_val = (val - mean) / (std if std > 0 else 1.0)
             vec.append(norm_val)
         return vec
 
@@ -104,9 +110,9 @@ class Preprocessor:
 class PureTreeSHAP:
     """Exact TreeSHAP attribution engine for decision tree ensembles."""
     def __init__(self, xgb_data: dict):
-        self.base_score = xgb_data["base_score"]
-        self.learning_rate = xgb_data["learning_rate"]
-        self.trees = xgb_data["trees"]
+        self.base_score = xgb_data.get("base_score", 0.0)
+        self.learning_rate = xgb_data.get("learning_rate", 1.0)
+        self.trees = xgb_data.get("trees", [])
         self._tree_weights_cache = []
         self._precompute_tree_expectations()
 
@@ -175,9 +181,19 @@ class PureTreeSHAP:
 class ShapExplainabilityService:
     def __init__(self, models_dir: Optional[Path] = None):
         if models_dir is None:
-            models_dir = Path(__file__).resolve().parent.parent / "models"
-            if not models_dir.exists():
-                models_dir = Path(__file__).resolve().parent.parent.parent / "models"
+            cur = Path(__file__).resolve()
+            candidates = [
+                cur.parent.parent.parent / "models",
+                cur.parent.parent / "models",
+                Path.cwd() / "backend" / "models",
+                Path.cwd() / "models",
+            ]
+            for c in candidates:
+                if (c / "preprocessor.json").exists():
+                    models_dir = c
+                    break
+            if models_dir is None:
+                models_dir = candidates[0]
 
         self.models_dir = models_dir
         with open(models_dir / "preprocessor.json", "r", encoding="utf-8") as f:
@@ -214,7 +230,7 @@ class ShapExplainabilityService:
         else:
             risk_tier = "CRITICAL"
 
-        # Group 31 encoded features into 14 original supply chain features
+        # Group encoded features into original high-level features
         grouped_shap: dict[str, float] = {f: 0.0 for f in CATEGORICAL_FEATURES + NUMERICAL_FEATURES}
         encoded_names = self.preprocessor.feature_names
 
@@ -234,11 +250,11 @@ class ShapExplainabilityService:
             raw_val = shipment_data.get(feat_name, "N/A")
             abs_val = abs(shap_val)
             
-            if abs_val >= 0.25:
+            if abs_val >= 0.20:
                 magnitude = "CRITICAL"
-            elif abs_val >= 0.12:
+            elif abs_val >= 0.10:
                 magnitude = "HIGH"
-            elif abs_val >= 0.04:
+            elif abs_val >= 0.03:
                 magnitude = "MEDIUM"
             else:
                 magnitude = "LOW"

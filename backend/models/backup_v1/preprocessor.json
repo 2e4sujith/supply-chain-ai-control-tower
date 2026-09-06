@@ -1,0 +1,90 @@
+{
+  "cat_categories": {
+    "transport_mode": [
+      "Air",
+      "Ocean",
+      "Rail",
+      "Road"
+    ],
+    "origin_region": [
+      "East_Asia",
+      "Europe",
+      "Latin_America",
+      "Middle_East",
+      "North_America",
+      "South_Asia",
+      "Southeast_Asia"
+    ],
+    "destination_region": [
+      "East_Asia",
+      "Europe",
+      "Latin_America",
+      "Middle_East",
+      "North_America",
+      "Oceania",
+      "South_Asia"
+    ],
+    "priority_level": [
+      "High",
+      "Standard",
+      "Urgent"
+    ]
+  },
+  "num_means": {
+    "route_distance_km": 6587.645012860817,
+    "planned_duration_hours": 191.60280080022864,
+    "elapsed_transit_hours": 98.57922263503859,
+    "transit_progress_pct": 0.5149468419548442,
+    "carrier_reliability_score": 0.8427185481566162,
+    "origin_port_congestion_index": 35.34004001143184,
+    "dest_port_congestion_index": 36.40254358388111,
+    "weather_severity_index": 27.417547870820233,
+    "customs_inspection_risk": 0.3253019434124036,
+    "seasonal_disruption_factor": 0.5237708488139469
+  },
+  "num_stds": {
+    "route_distance_km": 4670.58871346615,
+    "planned_duration_hours": 190.27369217636144,
+    "elapsed_transit_hours": 121.0354849834316,
+    "transit_progress_pct": 0.2698194659486272,
+    "carrier_reliability_score": 0.10778785718567921,
+    "origin_port_congestion_index": 19.64043632868228,
+    "dest_port_congestion_index": 20.711059815337986,
+    "weather_severity_index": 16.992418350060166,
+    "customs_inspection_risk": 0.20975016105346905,
+    "seasonal_disruption_factor": 0.2652520195805548
+  },
+  "feature_names": [
+    "transport_mode_Air",
+    "transport_mode_Ocean",
+    "transport_mode_Rail",
+    "transport_mode_Road",
+    "origin_region_East_Asia",
+    "origin_region_Europe",
+    "origin_region_Latin_America",
+    "origin_region_Middle_East",
+    "origin_region_North_America",
+    "origin_region_South_Asia",
+    "origin_region_Southeast_Asia",
+    "destination_region_East_Asia",
+    "destination_region_Europe",
+    "destination_region_Latin_America",
+    "destination_region_Middle_East",
+    "destination_region_North_America",
+    "destination_region_Oceania",
+    "destination_region_South_Asia",
+    "priority_level_High",
+    "priority_level_Standard",
+    "priority_level_Urgent",
+    "route_distance_km",
+    "planned_duration_hours",
+    "elapsed_transit_hours",
+    "transit_progress_pct",
+    "carrier_reliability_score",
+    "origin_port_congestion_index",
+    "dest_port_congestion_index",
+    "weather_severity_index",
+    "customs_inspection_risk",
+    "seasonal_disruption_factor"
+  ]
+}

@@ -53,12 +53,21 @@ async function request(path, options = {}) {
         let errDetail = ''
         try {
             const errData = await response.json()
-            errDetail = errData.detail || errData.message || ''
+            if (typeof errData.detail === 'string') {
+                errDetail = errData.detail
+            } else if (Array.isArray(errData.detail)) {
+                errDetail = errData.detail.map(d => `${d.loc ? d.loc.filter(l => l !== 'body').join('.') : 'field'}: ${d.msg || d.message}`).join(', ')
+            } else if (Array.isArray(errData.errors)) {
+                errDetail = errData.errors.map(e => `${e.field}: ${e.message}`).join(', ')
+            } else if (errData.message) {
+                errDetail = errData.message
+            }
         } catch {
             // Non-JSON response body
         }
         if (response.status === 404) throw new Error(errDetail || 'The requested resource was not found.')
-        if (response.status === 422) throw new Error(errDetail || 'Please check the submitted information.')
+        if (response.status === 409) throw new Error(errDetail || 'A shipment with this ID already exists in the system.')
+        if (response.status === 422) throw new Error(errDetail || 'Invalid shipment data. Please verify all required fields.')
         if (response.status >= 500) throw new Error(errDetail || 'Backend server is unavailable.')
         throw new Error(errDetail || `Request failed with status ${response.status}.`)
     }
@@ -83,20 +92,38 @@ export function normalizeShipment(shipment) {
 }
 
 function shipmentPayload(data) {
+    let cleanId = (data.shipment_id || data.id || '').trim().toUpperCase()
+    if (cleanId && !cleanId.startsWith('SHP-')) {
+        if (cleanId.startsWith('SHP')) {
+            cleanId = 'SHP-' + cleanId.slice(3).replace(/^[-_ ]+/, '')
+        } else {
+            cleanId = `SHP-${cleanId}`
+        }
+    }
+
+    const origin = (data.origin || '').trim()
+    const destination = (data.destination || '').trim()
+    const currentLocation = (data.current_location || data.currentLocation || origin || '').trim()
+
     return {
-        shipment_id: data.shipment_id || data.id,
-        origin: data.origin,
-        destination: data.destination,
-        current_location: data.current_location || data.currentLocation,
-        status: data.status,
-        risk_score: data.risk_score || data.riskScore || 0,
+        shipment_id: cleanId,
+        origin: origin,
+        destination: destination,
+        current_location: currentLocation,
+        status: data.status || 'Booked',
+        risk_score: typeof data.risk_score === 'number' ? data.risk_score : (typeof data.riskScore === 'number' ? data.riskScore : 10),
         risk_level: data.risk_level || data.risk || 'Low',
-        eta: data.eta || data.expectedDelivery,
+        eta: data.eta || data.expectedDelivery || 'TBD',
         last_updated: data.last_updated || data.lastUpdated || 'Just now',
-        priority: data.priority,
-        risk_factors: data.risk_factors || data.riskFactors || ['New shipment awaiting monitoring'],
+        priority: data.priority || 'Standard',
+        risk_factors: Array.isArray(data.risk_factors) && data.risk_factors.length > 0
+            ? data.risk_factors
+            : (Array.isArray(data.riskFactors) && data.riskFactors.length > 0
+                ? data.riskFactors
+                : ['New shipment awaiting monitoring']),
     }
 }
+
 
 export async function getShipments() {
     return (await request('/api/shipments')).map(normalizeShipment)

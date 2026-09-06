@@ -1,0 +1,124 @@
+{
+  "training_dataset_size": 3499,
+  "validation_dataset_size": 749,
+  "test_dataset_size": 750,
+  "features": {
+    "categorical": [
+      "transport_mode",
+      "origin_region",
+      "destination_region",
+      "priority_level"
+    ],
+    "numerical": [
+      "route_distance_km",
+      "planned_duration_hours",
+      "elapsed_transit_hours",
+      "transit_progress_pct",
+      "carrier_reliability_score",
+      "origin_port_congestion_index",
+      "dest_port_congestion_index",
+      "weather_severity_index",
+      "customs_inspection_risk",
+      "seasonal_disruption_factor"
+    ],
+    "encoded_feature_names": [
+      "transport_mode_Air",
+      "transport_mode_Ocean",
+      "transport_mode_Rail",
+      "transport_mode_Road",
+      "origin_region_East_Asia",
+      "origin_region_Europe",
+      "origin_region_Latin_America",
+      "origin_region_Middle_East",
+      "origin_region_North_America",
+      "origin_region_South_Asia",
+      "origin_region_Southeast_Asia",
+      "destination_region_East_Asia",
+      "destination_region_Europe",
+      "destination_region_Latin_America",
+      "destination_region_Middle_East",
+      "destination_region_North_America",
+      "destination_region_Oceania",
+      "destination_region_South_Asia",
+      "priority_level_High",
+      "priority_level_Standard",
+      "priority_level_Urgent",
+      "route_distance_km",
+      "planned_duration_hours",
+      "elapsed_transit_hours",
+      "transit_progress_pct",
+      "carrier_reliability_score",
+      "origin_port_congestion_index",
+      "dest_port_congestion_index",
+      "weather_severity_index",
+      "customs_inspection_risk",
+      "seasonal_disruption_factor"
+    ]
+  },
+  "target": "disrupted",
+  "training_timestamp": "2026-08-25T08:31:30Z",
+  "random_seed": 42,
+  "selected_primary_model": "XGBoost",
+  "metrics": {
+    "random_forest": {
+      "validation": {
+        "accuracy": 0.9332,
+        "precision": 0.9328,
+        "recall": 1.0,
+        "f1_score": 0.9652,
+        "roc_auc": 0.941,
+        "pr_auc": 0.9947,
+        "confusion_matrix": {
+          "tn": 5,
+          "fp": 50,
+          "fn": 0,
+          "tp": 694
+        }
+      },
+      "test": {
+        "accuracy": 0.9253,
+        "precision": 0.9252,
+        "recall": 1.0,
+        "f1_score": 0.9612,
+        "roc_auc": 0.9214,
+        "pr_auc": 0.9923,
+        "confusion_matrix": {
+          "tn": 1,
+          "fp": 56,
+          "fn": 0,
+          "tp": 693
+        }
+      }
+    },
+    "xgboost": {
+      "validation": {
+        "accuracy": 0.9479,
+        "precision": 0.9468,
+        "recall": 1.0,
+        "f1_score": 0.9727,
+        "roc_auc": 0.9681,
+        "pr_auc": 0.9973,
+        "confusion_matrix": {
+          "tn": 16,
+          "fp": 39,
+          "fn": 0,
+          "tp": 694
+        }
+      },
+      "test": {
+        "accuracy": 0.9333,
+        "precision": 0.9339,
+        "recall": 0.9986,
+        "f1_score": 0.9651,
+        "roc_auc": 0.9621,
+        "pr_auc": 0.9967,
+        "confusion_matrix": {
+          "tn": 8,
+          "fp": 49,
+          "fn": 1,
+          "tp": 692
+        }
+      }
+    }
+  }
+}

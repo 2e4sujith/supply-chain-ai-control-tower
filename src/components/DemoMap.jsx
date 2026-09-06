@@ -86,65 +86,170 @@ function getModeIcon(mode) {
   }
 }
 
-function DemoMap({ shipment, route, alternativeRoute }) {
-  // If route is supplied, extract the real Dijkstra path nodes
-  const recommendedPath = route?.recommended_route || (alternativeRoute ? ['Shanghai', 'Oakland', 'Los_Angeles', 'Long_Beach'] : null)
-  const currentPath = route?.current_route || [shipment?.origin?.split(',')[0] || 'Origin', shipment?.currentLocation?.split(',')[0] || 'Current', shipment?.destination?.split(',')[0] || 'Destination']
-  
-  // Format primary coordinates display
-  const origClean = normalizeNodeName(shipment?.origin)
-  const origCoord = NODE_COORDINATES[origClean] || { lat: 31.23, lon: 121.47 }
-  const destClean = normalizeNodeName(shipment?.destination)
-  const destCoord = NODE_COORDINATES[destClean] || { lat: 34.05, lon: -118.24 }
+function getNodeCoord(nodeName, idx = 0, total = 1) {
+  if (!nodeName) return { lat: 30, lon: 0, label: 'Unknown' }
+  const clean = normalizeNodeName(nodeName)
+  if (NODE_COORDINATES[clean]) return NODE_COORDINATES[clean]
 
-  // Map nodes to visual points
-  const waypoints = recommendedPath
-    ? recommendedPath.map((nodeName, idx) => {
+  const lower = clean.toLowerCase()
+  for (const [k, v] of Object.entries(NODE_COORDINATES)) {
+    if (k.toLowerCase() === lower || lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) {
+      return v
+    }
+  }
+
+  return {
+    lat: 30 + (idx / Math.max(1, total - 1)) * 15,
+    lon: 60 + (idx / Math.max(1, total - 1)) * 80,
+    label: nodeName.replace(/_/g, ' '),
+  }
+}
+
+function DemoMap({ shipment, route, alternativeRoute }) {
+  // Extract paths from Dijkstra backend route or shipment endpoints
+  const rawRecommendedPath = route?.recommended_route || (alternativeRoute ? ['Shanghai', 'Oakland', 'Los_Angeles', 'Long_Beach'] : null)
+  const rawCurrentPath = route?.current_route || [
+    shipment?.origin?.split(',')[0] || 'Shanghai',
+    shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('in transit')
+      ? shipment.currentLocation.split(',')[0]
+      : null,
+    shipment?.destination?.split(',')[0] || 'Long_Beach',
+  ].filter(Boolean)
+
+  const origClean = normalizeNodeName(shipment?.origin || rawCurrentPath[0] || 'Shanghai')
+  const origCoord = getNodeCoord(origClean)
+  const destClean = normalizeNodeName(shipment?.destination || rawCurrentPath[rawCurrentPath.length - 1] || 'Long_Beach')
+  const destCoord = getNodeCoord(destClean)
+
+  // Collect all unique node identifiers across all displayed routes
+  const allNodeNames = Array.from(
+    new Set([
+      ...(rawRecommendedPath || []),
+      ...(rawCurrentPath || []),
+      origClean,
+      destClean,
+    ])
+  )
+
+  const allCoords = allNodeNames.map((n, i) => ({
+    name: n,
+    ...getNodeCoord(n, i, allNodeNames.length),
+  }))
+
+  // Determine if this is a Trans-Pacific crossing (lon > 40°E and lon < -40°W)
+  const hasEastAsia = allCoords.some((c) => c.lon > 40)
+  const hasAmericas = allCoords.some((c) => c.lon < -40)
+  const isPacificCrossing = hasEastAsia && hasAmericas
+
+  const unwrapLons = allCoords.map((c) => (isPacificCrossing && c.lon < 0 ? c.lon + 360 : c.lon))
+  const lats = allCoords.map((c) => c.lat)
+
+  const minLon = Math.min(...unwrapLons)
+  const maxLon = Math.max(...unwrapLons)
+  const minLat = Math.min(...lats)
+  const maxLat = Math.max(...lats)
+
+  const minLonSpan = 22
+  const minLatSpan = 14
+  const centerLon = (minLon + maxLon) / 2
+  const centerLat = (minLat + maxLat) / 2
+
+  const lonSpan = Math.max(maxLon - minLon, minLonSpan)
+  const latSpan = Math.max(maxLat - minLat, minLatSpan)
+
+  const paddedMinLon = centerLon - (lonSpan * 1.28) / 2
+  const paddedMaxLon = centerLon + (lonSpan * 1.28) / 2
+  const paddedMinLat = centerLat - (latSpan * 1.35) / 2
+  const paddedMaxLat = centerLat + (latSpan * 1.35) / 2
+
+  const CANVAS_WIDTH = 800
+  const CANVAS_HEIGHT = 520
+  const PAD_X = 85
+  const PAD_Y = 70
+
+  const project = (lat, lon) => {
+    const adjLon = isPacificCrossing && lon < 0 ? lon + 360 : lon
+    const normX = (adjLon - paddedMinLon) / (paddedMaxLon - paddedMinLon)
+    const normY = (lat - paddedMinLat) / (paddedMaxLat - paddedMinLat)
+
+    const x = PAD_X + Math.max(0, Math.min(1, normX)) * (CANVAS_WIDTH - 2 * PAD_X)
+    const y = (CANVAS_HEIGHT - PAD_Y) - Math.max(0, Math.min(1, normY)) * (CANVAS_HEIGHT - 2 * PAD_Y)
+    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }
+  }
+
+  // Project recommended path waypoints
+  const waypoints = rawRecommendedPath
+    ? rawRecommendedPath.map((nodeName, idx) => {
         const clean = normalizeNodeName(nodeName)
-        const coord = NODE_COORDINATES[clean]
-        const total = recommendedPath.length
-        const pct = idx / (total - 1 || 1)
-        
-        // Compute interpolated position for SVG canvas (viewBox 800 x 520)
-        let x = 110 + pct * 580
-        let y = 390 - Math.sin(pct * Math.PI) * 160 + (idx % 2 === 1 ? 25 : -15)
-        
-        if (idx === 0) { x = 120; y = 405; }
-        if (idx === total - 1) { x = 690; y = 115; }
+        const coord = getNodeCoord(clean, idx, rawRecommendedPath.length)
+        const pt = project(coord.lat, coord.lon)
+        const total = rawRecommendedPath.length
 
         return {
-          id: nodeName,
-          name: coord?.label || nodeName.replace(/_/g, ' '),
-          x,
-          y,
+          id: `${nodeName}-${idx}`,
+          name: coord.label || nodeName.replace(/_/g, ' '),
+          x: pt.x,
+          y: pt.y,
           isOrigin: idx === 0,
           isDestination: idx === total - 1,
           isWaypoint: idx > 0 && idx < total - 1,
-          lat: coord?.lat,
-          lon: coord?.lon,
+          lat: coord.lat,
+          lon: coord.lon,
         }
       })
     : null
 
-  // Generate SVG curve path through waypoints
-  const generateSvgPath = (pts) => {
+  // Project current path waypoints
+  const currentWaypoints = rawCurrentPath.map((nodeName, idx) => {
+    const clean = normalizeNodeName(nodeName)
+    const coord = getNodeCoord(clean, idx, rawCurrentPath.length)
+    const pt = project(coord.lat, coord.lon)
+    return {
+      name: coord.label || nodeName.replace(/_/g, ' '),
+      x: pt.x,
+      y: pt.y,
+    }
+  })
+
+  // Generate smooth SVG curve through projected waypoints
+  const generateSvgPath = (pts, arcOffset = -18) => {
     if (!pts || pts.length < 2) return ''
     if (pts.length === 2) {
-      return `M ${pts[0].x} ${pts[0].y} Q ${(pts[0].x + pts[1].x) / 2} ${(pts[0].y + pts[1].y) / 2 - 40} ${pts[1].x} ${pts[1].y}`
+      const mx = (pts[0].x + pts[1].x) / 2
+      const my = (pts[0].y + pts[1].y) / 2 + arcOffset
+      return `M ${pts[0].x} ${pts[0].y} Q ${mx} ${my} ${pts[1].x} ${pts[1].y}`
     }
     let d = `M ${pts[0].x} ${pts[0].y}`
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[i]
       const p1 = pts[i + 1]
       const mx = (p0.x + p1.x) / 2
-      const my = (p0.y + p1.y) / 2
-      d += ` Q ${p0.x + 30} ${p0.y - 20}, ${mx} ${my} T ${p1.x} ${p1.y}`
+      const my = (p0.y + p1.y) / 2 + (i % 2 === 0 ? arcOffset : -arcOffset * 0.4)
+      d += ` Q ${mx} ${my} ${p1.x} ${p1.y}`
     }
     return d
   }
 
-  const recommendedSvgD = waypoints ? generateSvgPath(waypoints) : 'M 125 405 C 255 430, 375 390, 478 320 S 635 170, 705 105'
-  const currentSvgD = 'M 125 405 C 245 352, 290 285, 408 254 S 625 168, 705 105'
+  const recommendedSvgD = waypoints
+    ? generateSvgPath(waypoints, -22)
+    : 'M 125 405 C 255 430, 375 390, 478 320 S 635 170, 705 105'
+
+  const currentSvgD = currentWaypoints.length >= 2
+    ? generateSvgPath(currentWaypoints, 18)
+    : 'M 125 405 C 245 352, 290 285, 408 254 S 625 168, 705 105'
+
+  // Dynamic Hazard Zone positioning centered near corridor midpoint
+  const hazardMidX = waypoints && waypoints.length > 1
+    ? (waypoints[0].x + waypoints[waypoints.length - 1].x) / 2
+    : 480
+  const hazardMidY = waypoints && waypoints.length > 1
+    ? Math.min(waypoints[0].y, waypoints[waypoints.length - 1].y) - 20
+    : 160
+
+  const riskZoneD = `M ${Math.max(120, hazardMidX - 70)} ${Math.max(80, hazardMidY - 45)} ` +
+    `C ${hazardMidX - 10} ${hazardMidY - 75}, ${hazardMidX + 70} ${hazardMidY - 50}, ${hazardMidX + 105} ${hazardMidY + 10} ` +
+    `C ${hazardMidX + 135} ${hazardMidY + 70}, ${hazardMidX + 90} ${hazardMidY + 130}, ${hazardMidX + 20} ${hazardMidY + 135} ` +
+    `C ${hazardMidX - 50} ${hazardMidY + 140}, ${hazardMidX - 100} ${hazardMidY + 90}, ${hazardMidX - 90} ${hazardMidY + 30} Z`
 
   return (
     <div className="demo-map" aria-label="Live Supply Chain Route Map">
@@ -182,7 +287,7 @@ function DemoMap({ shipment, route, alternativeRoute }) {
         {/* Hazard / Disruption Risk Zone */}
         <path
           className="risk-zone"
-          d="M 440 100 C 505 65, 585 90, 620 150 C 650 210, 605 272, 535 275 C 468 278, 413 232, 425 170 Z"
+          d={riskZoneD}
         />
 
         {/* Current / Baseline Route */}
@@ -213,7 +318,7 @@ function DemoMap({ shipment, route, alternativeRoute }) {
 
       {/* Waypoint Markers on Canvas */}
       {waypoints ? (
-        waypoints.map((wp, idx) => (
+        waypoints.map((wp) => (
           <div
             key={wp.id}
             className={`map-marker dynamic-waypoint ${wp.isOrigin ? 'marker-origin' : wp.isDestination ? 'marker-destination' : 'marker-intermediate'}`}
@@ -238,22 +343,32 @@ function DemoMap({ shipment, route, alternativeRoute }) {
           </div>
         ))
       ) : (
-        <>
-          <div className="map-marker marker-origin">
-            <MapPin size={17} />
-            <span>{shipment?.origin?.split(',')[0] || 'Origin'}</span>
+        currentWaypoints.map((wp, idx) => (
+          <div
+            key={`curr-${idx}`}
+            className={`map-marker ${idx === 0 ? 'marker-origin' : idx === currentWaypoints.length - 1 ? 'marker-destination' : 'marker-current'}`}
+            style={{ left: `${(wp.x / 800) * 100}%`, top: `${(wp.y / 520) * 100}%` }}
+          >
+            {idx === 0 ? (
+              <>
+                <MapPin size={17} />
+                <span>{wp.name}</span>
+              </>
+            ) : idx === currentWaypoints.length - 1 ? (
+              <>
+                <MapPin size={17} />
+                <span>{wp.name}</span>
+              </>
+            ) : (
+              <>
+                <span className="pulse-marker">
+                  <Navigation size={14} />
+                </span>
+                <span>{wp.name}</span>
+              </>
+            )}
           </div>
-          <div className="map-marker marker-current">
-            <span className="pulse-marker">
-              <Navigation size={14} />
-            </span>
-            <span>{shipment?.currentLocation?.split(',')[0] || 'In Transit'}</span>
-          </div>
-          <div className="map-marker marker-destination">
-            <MapPin size={17} />
-            <span>{shipment?.destination?.split(',')[0] || 'Destination'}</span>
-          </div>
-        </>
+        ))
       )}
 
       {/* Risk Area Tag */}
@@ -277,7 +392,7 @@ function DemoMap({ shipment, route, alternativeRoute }) {
       {/* Map Scale & Corridor Modes Footer */}
       <div className="map-scale">
         <Route size={14} />
-        {shipment?.origin?.split(',')[0]}
+        {shipment?.origin?.split(',')[0] || 'Origin'}
         <span>→</span>
         {route?.transport_modes?.map((m) => (
           <span key={m} className="mode-badge" title={`Transport Mode: ${m}`}>
@@ -285,7 +400,7 @@ function DemoMap({ shipment, route, alternativeRoute }) {
           </span>
         ))}
         <span>→</span>
-        {shipment?.destination?.split(',')[0]}
+        {shipment?.destination?.split(',')[0] || 'Destination'}
       </div>
     </div>
   )

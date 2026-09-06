@@ -1,8 +1,9 @@
 """
 Model Training and Evaluation Pipeline for Supply Chain AI Disruption Prediction.
 
-Trains, evaluates, and compares Random Forest vs XGBoost models on the stratified
-synthetic supply chain dataset. Saves trained model artifacts and metadata.
+Trains, evaluates, and compares Random Forest vs XGBoost models on the real-world
+DataCo Supply Chain dataset (180,519 records).
+Optimized for high-precision inference and fast tree construction.
 """
 
 import csv
@@ -14,41 +15,82 @@ import random
 import time
 
 CATEGORICAL_FEATURES = [
-    "transport_mode",
-    "origin_region",
-    "destination_region",
-    "priority_level",
+    "Shipping Mode",
+    "Type",
+    "Customer Segment",
+    "Market",
+    "Order Region",
+    "Department Name",
 ]
 
 NUMERICAL_FEATURES = [
-    "route_distance_km",
-    "planned_duration_hours",
-    "elapsed_transit_hours",
-    "transit_progress_pct",
-    "carrier_reliability_score",
-    "origin_port_congestion_index",
-    "dest_port_congestion_index",
-    "weather_severity_index",
-    "customs_inspection_risk",
-    "seasonal_disruption_factor",
+    "Days for shipment (scheduled)",
+    "Order Item Product Price",
+    "Order Item Quantity",
+    "Order Item Discount Rate",
+    "Order Item Discount",
+    "Order Item Total",
+    "Order Profit Per Order",
+    "Order Item Profit Ratio",
+    "Latitude",
+    "Longitude",
+    "order_hour",
+    "order_dayofweek",
+    "order_month",
 ]
 
-TARGET = "disrupted"
+TARGET = "Late_delivery_risk"
 SEED = 42
 
 
-def load_csv_data(filepath: Path) -> tuple[list[dict], list[int]]:
-    X_rows = []
-    y_vals = []
-    with open(filepath, mode="r", encoding="utf-8") as f:
+def load_dataco_data(csv_path: Path) -> tuple[list[dict], list[int]]:
+    """Load and extract clean pre-delivery predictive features and target from DataCo dataset."""
+    rows = []
+    y_all = []
+    
+    with open(csv_path, mode="r", encoding="latin-1") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            feat = {k: row[k] for k in CATEGORICAL_FEATURES}
-            for k in NUMERICAL_FEATURES:
-                feat[k] = float(row[k])
-            X_rows.append(feat)
-            y_vals.append(int(row[TARGET]))
-    return X_rows, y_vals
+            date_str = row["order date (DateOrders)"]
+            try:
+                d_part, t_part = date_str.strip().split(" ")
+                m, d, y = [int(x) for x in d_part.split("/")]
+                h, minute = [int(x) for x in t_part.split(":")]
+                import datetime
+                dt = datetime.datetime(y, m, d, h, minute)
+                order_hour = float(dt.hour)
+                order_dayofweek = float(dt.weekday())
+                order_month = float(dt.month)
+            except Exception:
+                order_hour = 12.0
+                order_dayofweek = 2.0
+                order_month = 6.0
+
+            feat = {
+                "Shipping Mode": row["Shipping Mode"].strip(),
+                "Type": row["Type"].strip(),
+                "Customer Segment": row["Customer Segment"].strip(),
+                "Market": row["Market"].strip(),
+                "Order Region": row["Order Region"].strip(),
+                "Department Name": row["Department Name"].strip(),
+                "Days for shipment (scheduled)": float(row["Days for shipment (scheduled)"]),
+                "Order Item Product Price": float(row["Order Item Product Price"]),
+                "Order Item Quantity": float(row["Order Item Quantity"]),
+                "Order Item Discount Rate": float(row["Order Item Discount Rate"]),
+                "Order Item Discount": float(row["Order Item Discount"]),
+                "Order Item Total": float(row["Order Item Total"]),
+                "Order Profit Per Order": float(row["Order Profit Per Order"]),
+                "Order Item Profit Ratio": float(row["Order Item Profit Ratio"]),
+                "Latitude": float(row["Latitude"]) if row["Latitude"] else 0.0,
+                "Longitude": float(row["Longitude"]) if row["Longitude"] else 0.0,
+                "order_hour": order_hour,
+                "order_dayofweek": order_dayofweek,
+                "order_month": order_month,
+            }
+            rows.append(feat)
+            y_all.append(int(row[TARGET]))
+            
+    return rows, y_all
 
 
 def calculate_classification_metrics(y_true: list[int], y_prob: list[float], threshold: float = 0.50) -> dict:
@@ -65,6 +107,7 @@ def calculate_classification_metrics(y_true: list[int], y_prob: list[float], thr
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
     
+    # Fast Wilcoxon / Rank-based ROC-AUC
     pairs = sorted(zip(y_prob, y_true), key=lambda x: x[0])
     n_pos = sum(y_true)
     n_neg = total - n_pos
@@ -76,24 +119,23 @@ def calculate_classification_metrics(y_true: list[int], y_prob: list[float], thr
         rank_sum = sum(i + 1 for i, (_, y) in enumerate(pairs) if y == 1)
         roc_auc = (rank_sum - (n_pos * (n_pos + 1)) / 2.0) / (n_pos * n_neg)
         
-        pairs_desc = sorted(zip(y_prob, y_true), key=lambda x: x[0], reverse=True)
-        cum_tp = 0
-        cum_fp = 0
+        # PR-AUC via trapezoidal integration on 50 sampled thresholds
         precisions = []
         recalls = []
-        for p, y in pairs_desc:
-            if y == 1:
-                cum_tp += 1
-            else:
-                cum_fp += 1
-            recalls.append(cum_tp / n_pos)
-            precisions.append(cum_tp / (cum_tp + cum_fp))
+        for thresh in [i / 50.0 for i in range(51)]:
+            pred_t = [1 if p >= thresh else 0 for p in y_prob]
+            tp_t = sum(1 for yt, yp in zip(y_true, pred_t) if yt == 1 and yp == 1)
+            fp_t = sum(1 for yt, yp in zip(y_true, pred_t) if yt == 0 and yp == 1)
+            p_t = tp_t / (tp_t + fp_t) if (tp_t + fp_t) > 0 else 1.0
+            r_t = tp_t / n_pos if n_pos > 0 else 0.0
+            precisions.append(p_t)
+            recalls.append(r_t)
             
         pr_auc = 0.0
-        prev_r = 0.0
-        for r, prec in zip(recalls, precisions):
-            pr_auc += (r - prev_r) * prec
-            prev_r = r
+        for i in range(len(recalls) - 1):
+            dr = abs(recalls[i] - recalls[i+1])
+            avg_p = (precisions[i] + precisions[i+1]) / 2.0
+            pr_auc += dr * avg_p
             
     return {
         "accuracy": round(accuracy, 4),
@@ -101,7 +143,7 @@ def calculate_classification_metrics(y_true: list[int], y_prob: list[float], thr
         "recall": round(recall, 4),
         "f1_score": round(f1, 4),
         "roc_auc": round(roc_auc, 4),
-        "pr_auc": round(pr_auc, 4),
+        "pr_auc": round(min(1.0, pr_auc), 4),
         "confusion_matrix": {
             "tn": tn,
             "fp": fp,
@@ -119,6 +161,7 @@ class PurePythonPreprocessor:
         self.feature_names = []
 
     def fit(self, X: list[dict]):
+        self.feature_names = []
         for cat in CATEGORICAL_FEATURES:
             vals = sorted(list(set(row[cat] for row in X)))
             self.cat_categories[cat] = vals
@@ -139,11 +182,11 @@ class PurePythonPreprocessor:
         for row in X:
             vec = []
             for cat in CATEGORICAL_FEATURES:
-                val = row[cat]
+                val = row.get(cat, "")
                 for cat_val in self.cat_categories[cat]:
                     vec.append(1.0 if val == cat_val else 0.0)
             for num in NUMERICAL_FEATURES:
-                val = row[num]
+                val = float(row.get(num, self.num_means[num]))
                 norm_val = (val - self.num_means[num]) / self.num_stds[num]
                 vec.append(norm_val)
             transformed.append(vec)
@@ -162,7 +205,7 @@ class PurePythonTree:
         return self.value is not None
 
 
-def _build_rf_tree(X, y, depth, max_depth, rng, feature_subsample_size=6, min_samples=6):
+def _build_rf_tree(X, y, depth, max_depth, rng, feature_subsample_size=8, min_samples=15):
     n = len(X)
     n_pos = sum(y)
     if depth >= max_depth or n <= min_samples or n_pos == 0 or n_pos == n:
@@ -179,23 +222,27 @@ def _build_rf_tree(X, y, depth, max_depth, rng, feature_subsample_size=6, min_sa
     current_gini = 1.0 - (p1**2 + (1.0 - p1)**2)
 
     for f_idx in selected_feats:
-        vals = [row[f_idx] for row in X]
-        sorted_vals = sorted(vals)
-        step = max(1, n // 5)
-        candidates = [sorted_vals[i] for i in range(step, n, step)][:4]
+        vals = [X[i][f_idx] for i in range(0, n, max(1, n // 20))]
+        candidates = sorted(set(vals))
         
         for thresh in candidates:
-            left_y = [y[i] for i, row in enumerate(X) if row[f_idx] <= thresh]
-            n_L = len(left_y)
-            n_R = n - n_L
-            if n_L == 0 or n_R == 0:
+            left_pos = 0
+            left_count = 0
+            for i in range(n):
+                if X[i][f_idx] <= thresh:
+                    left_count += 1
+                    if y[i] == 1:
+                        left_pos += 1
+            right_count = n - left_count
+            if left_count == 0 or right_count == 0:
                 continue
-            p_L = sum(left_y) / n_L
+            right_pos = n_pos - left_pos
+            p_L = left_pos / left_count
             gini_L = 1.0 - (p_L**2 + (1.0 - p_L)**2)
-            p_R = (n_pos - sum(left_y)) / n_R
+            p_R = right_pos / right_count
             gini_R = 1.0 - (p_R**2 + (1.0 - p_R)**2)
             
-            gain = current_gini - ((n_L / n) * gini_L + (n_R / n) * gini_R)
+            gain = current_gini - ((left_count / n) * gini_L + (right_count / n) * gini_R)
             if gain > best_gain:
                 best_gain = gain
                 best_feat = f_idx
@@ -204,10 +251,17 @@ def _build_rf_tree(X, y, depth, max_depth, rng, feature_subsample_size=6, min_sa
     if best_gain <= 0.0001 or best_feat is None:
         return PurePythonTree(value=n_pos / n if n > 0 else 0.0)
 
-    left_X = [row for row in X if row[best_feat] <= best_thresh]
-    left_y = [y[i] for i, row in enumerate(X) if row[best_feat] <= best_thresh]
-    right_X = [row for row in X if row[best_feat] > best_thresh]
-    right_y = [y[i] for i, row in enumerate(X) if row[best_feat] > best_thresh]
+    left_X = []
+    left_y = []
+    right_X = []
+    right_y = []
+    for i in range(n):
+        if X[i][best_feat] <= best_thresh:
+            left_X.append(X[i])
+            left_y.append(y[i])
+        else:
+            right_X.append(X[i])
+            right_y.append(y[i])
 
     left_child = _build_rf_tree(left_X, left_y, depth + 1, max_depth, rng, feature_subsample_size, min_samples)
     right_child = _build_rf_tree(right_X, right_y, depth + 1, max_depth, rng, feature_subsample_size, min_samples)
@@ -215,18 +269,18 @@ def _build_rf_tree(X, y, depth, max_depth, rng, feature_subsample_size=6, min_sa
 
 
 class PurePythonRandomForest:
-    def __init__(self, n_estimators=35, max_depth=6, random_state=42):
+    def __init__(self, n_estimators=30, max_depth=6, random_state=42):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.random_state = random_state
         self.trees = []
 
-    def fit(self, X, y):
+    def fit(self, X, y, sample_size=4000):
         rng = random.Random(self.random_state)
         n = len(X)
         self.trees = []
         for _ in range(self.n_estimators):
-            idx = [rng.randint(0, n - 1) for _ in range(n)]
+            idx = [rng.randint(0, n - 1) for _ in range(sample_size)]
             boot_X = [X[i] for i in idx]
             boot_y = [y[i] for i in idx]
             tree = _build_rf_tree(boot_X, boot_y, 0, self.max_depth, rng)
@@ -243,7 +297,7 @@ class PurePythonRandomForest:
         return [sum(self._eval_tree(t, x) for t in self.trees) / len(self.trees) for x in X]
 
 
-def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=6):
+def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=15):
     n = len(X)
     sum_res = sum(res)
     sum_w = sum(weights)
@@ -251,7 +305,7 @@ def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=6):
         return PurePythonTree(value=sum_res / (sum_w + 1.0))
 
     n_feats = len(X[0])
-    selected_feats = rng.sample(range(n_feats), min(8, n_feats))
+    selected_feats = rng.sample(range(n_feats), min(10, n_feats))
     
     current_score = (sum_res ** 2) / (sum_w + 1.0)
     best_gain = -1
@@ -259,20 +313,20 @@ def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=6):
     best_thresh = None
 
     for f_idx in selected_feats:
-        vals = [row[f_idx] for row in X]
-        sorted_vals = sorted(vals)
-        step = max(1, n // 6)
-        candidates = [sorted_vals[i] for i in range(step, n, step)][:5]
+        vals = [X[i][f_idx] for i in range(0, n, max(1, n // 20))]
+        candidates = sorted(set(vals))
         
         for thresh in candidates:
-            left_idx = [i for i, row in enumerate(X) if row[f_idx] <= thresh]
-            right_idx = [i for i, row in enumerate(X) if row[f_idx] > thresh]
-            if not left_idx or not right_idx:
-                continue
-            g_L = sum(res[i] for i in left_idx)
-            h_L = sum(weights[i] for i in left_idx)
+            g_L = 0.0
+            h_L = 0.0
+            for i in range(n):
+                if X[i][f_idx] <= thresh:
+                    g_L += res[i]
+                    h_L += weights[i]
             g_R = sum_res - g_L
             h_R = sum_w - h_L
+            if h_L <= 0.001 or h_R <= 0.001:
+                continue
             
             gain = 0.5 * (((g_L**2)/(h_L + 1.0)) + ((g_R**2)/(h_R + 1.0)) - current_score)
             if gain > best_gain:
@@ -283,13 +337,17 @@ def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=6):
     if best_gain <= 0.0001 or best_feat is None:
         return PurePythonTree(value=sum_res / (sum_w + 1.0))
 
-    left_X = [row for row in X if row[best_feat] <= best_thresh]
-    left_res = [res[i] for i, row in enumerate(X) if row[best_feat] <= best_thresh]
-    left_w = [weights[i] for i, row in enumerate(X) if row[best_feat] <= best_thresh]
-
-    right_X = [row for row in X if row[best_feat] > best_thresh]
-    right_res = [res[i] for i, row in enumerate(X) if row[best_feat] > best_thresh]
-    right_w = [weights[i] for i, row in enumerate(X) if row[best_feat] > best_thresh]
+    left_X, left_res, left_w = [], [], []
+    right_X, right_res, right_w = [], [], []
+    for i in range(n):
+        if X[i][best_feat] <= best_thresh:
+            left_X.append(X[i])
+            left_res.append(res[i])
+            left_w.append(weights[i])
+        else:
+            right_X.append(X[i])
+            right_res.append(res[i])
+            right_w.append(weights[i])
 
     left_child = _build_xgb_tree(left_X, left_res, left_w, depth + 1, max_depth, rng, min_samples)
     right_child = _build_xgb_tree(right_X, right_res, right_w, depth + 1, max_depth, rng, min_samples)
@@ -297,7 +355,7 @@ def _build_xgb_tree(X, res, weights, depth, max_depth, rng, min_samples=6):
 
 
 class PurePythonXGBoost:
-    def __init__(self, n_estimators=35, max_depth=4, learning_rate=0.15, scale_pos_weight=3.2, random_state=42):
+    def __init__(self, n_estimators=35, max_depth=5, learning_rate=0.25, scale_pos_weight=1.0, random_state=42):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.learning_rate = learning_rate
@@ -306,29 +364,35 @@ class PurePythonXGBoost:
         self.base_score = 0.0
         self.trees = []
 
-    def fit(self, X, y):
+    def fit(self, X, y, sample_size=5000):
         rng = random.Random(self.random_state)
+        n = len(X)
         p_base = sum(y) / len(y)
         self.base_score = math.log(p_base / (1.0 - p_base)) if 0 < p_base < 1 else 0.0
-        F = [self.base_score] * len(X)
+        F = [self.base_score] * n
         self.trees = []
 
         for _ in range(self.n_estimators):
-            p = [1.0 / (1.0 + math.exp(-max(-12, min(12, f)))) for f in F]
+            sub_idx = [rng.randint(0, n - 1) for _ in range(sample_size)]
+            sub_X = [X[i] for i in sub_idx]
+            sub_y = [y[i] for i in sub_idx]
+            sub_F = [F[i] for i in sub_idx]
+
+            p = [1.0 / (1.0 + math.exp(-max(-12, min(12, f)))) for f in sub_F]
             residuals = []
             weights = []
-            for y_true, p_pred in zip(y, p):
+            for y_true, p_pred in zip(sub_y, p):
                 w = self.scale_pos_weight if y_true == 1 else 1.0
                 g = w * (y_true - p_pred)
                 h = w * p_pred * (1.0 - p_pred)
                 residuals.append(g)
                 weights.append(h)
 
-            tree = _build_xgb_tree(X, residuals, weights, 0, self.max_depth, rng)
+            tree = _build_xgb_tree(sub_X, residuals, weights, 0, self.max_depth, rng)
             self.trees.append(tree)
 
-            for i, x in enumerate(X):
-                update = self._eval_tree(tree, x)
+            for i in range(n):
+                update = self._eval_tree(tree, X[i])
                 F[i] += self.learning_rate * update
 
     def _eval_tree(self, tree, x):
@@ -359,12 +423,54 @@ def train_and_evaluate_all(base_dir: Path | None = None) -> dict:
                 base_dir = base_dir / "backend"
 
     data_dir = base_dir / "data"
+    raw_csv = data_dir / "raw" / "DataCoSupplyChainDataset.csv"
     models_dir = base_dir / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    X_train_raw, y_train = load_csv_data(data_dir / "train.csv")
-    X_val_raw, y_val = load_csv_data(data_dir / "validation.csv")
-    X_test_raw, y_test = load_csv_data(data_dir / "test.csv")
+    print("=" * 75)
+    print("DATACO SUPPLY CHAIN DISRUPTION RISK ML TRAINING PIPELINE")
+    print(f"Dataset Path: {raw_csv}")
+    print("=" * 75)
+
+    if not raw_csv.exists():
+        raise FileNotFoundError(f"DataCo dataset not found at {raw_csv}")
+
+    rows, y_all = load_dataco_data(raw_csv)
+    n_total = len(rows)
+    n_pos = sum(y_all)
+    n_neg = n_total - n_pos
+
+    print(f"Loaded Total Records: {n_total}")
+    print(f"Target Distribution: Class 0 (On-time) = {n_neg} ({n_neg/n_total*100:.2f}%), Class 1 (Late) = {n_pos} ({n_pos/n_total*100:.2f}%)")
+
+    # Stratified 70 / 15 / 15 Split
+    rng = random.Random(SEED)
+    idx_0 = [i for i, y in enumerate(y_all) if y == 0]
+    idx_1 = [i for i, y in enumerate(y_all) if y == 1]
+    rng.shuffle(idx_0)
+    rng.shuffle(idx_1)
+
+    n0, n1 = len(idx_0), len(idx_1)
+    train_idx = idx_0[:int(0.70 * n0)] + idx_1[:int(0.70 * n1)]
+    val_idx = idx_0[int(0.70 * n0):int(0.85 * n0)] + idx_1[int(0.70 * n1):int(0.85 * n1)]
+    test_idx = idx_0[int(0.85 * n0):] + idx_1[int(0.85 * n1):]
+
+    rng.shuffle(train_idx)
+    rng.shuffle(val_idx)
+    rng.shuffle(test_idx)
+
+    X_train_raw = [rows[i] for i in train_idx]
+    y_train = [y_all[i] for i in train_idx]
+
+    X_val_raw = [rows[i] for i in val_idx]
+    y_val = [y_all[i] for i in val_idx]
+
+    X_test_raw = [rows[i] for i in test_idx]
+    y_test = [y_all[i] for i in test_idx]
+
+    print("-" * 75)
+    print(f"Train Set: {len(X_train_raw)} | Val Set: {len(X_val_raw)} | Test Set: {len(X_test_raw)}")
+    print("-" * 75)
 
     preprocessor = PurePythonPreprocessor()
     preprocessor.fit(X_train_raw)
@@ -373,40 +479,43 @@ def train_and_evaluate_all(base_dir: Path | None = None) -> dict:
     X_val = preprocessor.transform(X_val_raw)
     X_test = preprocessor.transform(X_test_raw)
 
-    print("=" * 70)
-    print("TRAINING MODELS: RANDOM FOREST vs. XGBOOST")
-    print("=" * 70)
-    print(f"Training Samples:   {len(X_train)} (Positive: {sum(y_train)}, Negative: {len(y_train) - sum(y_train)})")
-    print(f"Validation Samples: {len(X_val)} (Positive: {sum(y_val)}, Negative: {len(y_val) - sum(y_val)})")
-    print(f"Test Samples:       {len(X_test)} (Positive: {sum(y_test)}, Negative: {len(y_test) - sum(y_test)})")
-    print("-" * 70)
+    print(f"Extracted Features: {len(CATEGORICAL_FEATURES)} Categorical, {len(NUMERICAL_FEATURES)} Numerical")
+    print(f"Total One-Hot Encoded Features: {len(preprocessor.feature_names)}")
+    print("-" * 75)
 
     # 1. Train Random Forest
-    rf = PurePythonRandomForest(n_estimators=35, max_depth=6, random_state=42)
-    rf.fit(X_train, y_train)
+    print("Training Random Forest ensemble...")
+    t0_rf = time.time()
+    rf = PurePythonRandomForest(n_estimators=30, max_depth=6, random_state=SEED)
+    rf.fit(X_train, y_train, sample_size=4000)
+    rf_time = time.time() - t0_rf
+    print(f"Random Forest trained in {rf_time:.2f}s")
 
     rf_val_prob = rf.predict_proba(X_val)
     rf_test_prob = rf.predict_proba(X_test)
-
     rf_val_metrics = calculate_classification_metrics(y_val, rf_val_prob)
     rf_test_metrics = calculate_classification_metrics(y_test, rf_test_prob)
 
     # 2. Train XGBoost
-    xgb_model = PurePythonXGBoost(n_estimators=35, max_depth=4, learning_rate=0.15, scale_pos_weight=3.2, random_state=42)
-    xgb_model.fit(X_train, y_train)
+    print("Training XGBoost boosted tree ensemble...")
+    t0_xgb = time.time()
+    xgb_model = PurePythonXGBoost(n_estimators=35, max_depth=5, learning_rate=0.25, scale_pos_weight=1.0, random_state=SEED)
+    xgb_model.fit(X_train, y_train, sample_size=5000)
+    xgb_time = time.time() - t0_xgb
+    print(f"XGBoost trained in {xgb_time:.2f}s")
 
     xgb_val_prob = xgb_model.predict_proba(X_val)
     xgb_test_prob = xgb_model.predict_proba(X_test)
-
     xgb_val_metrics = calculate_classification_metrics(y_val, xgb_val_prob)
     xgb_test_metrics = calculate_classification_metrics(y_test, xgb_test_prob)
 
-    # Determine Winner
-    xgb_score = xgb_test_metrics["f1_score"] + xgb_test_metrics["roc_auc"] + xgb_test_metrics["recall"]
-    rf_score = rf_test_metrics["f1_score"] + rf_test_metrics["roc_auc"] + rf_test_metrics["recall"]
+    xgb_score = xgb_test_metrics["f1_score"] + xgb_test_metrics["roc_auc"] + xgb_test_metrics["accuracy"]
+    rf_score = rf_test_metrics["f1_score"] + rf_test_metrics["roc_auc"] + rf_test_metrics["accuracy"]
     primary_model = "XGBoost" if xgb_score >= rf_score else "Random Forest"
 
     metadata = {
+        "dataset_name": "DataCo Supply Chain Dataset",
+        "total_records": n_total,
         "training_dataset_size": len(X_train),
         "validation_dataset_size": len(X_val),
         "test_dataset_size": len(X_test),
@@ -416,6 +525,7 @@ def train_and_evaluate_all(base_dir: Path | None = None) -> dict:
             "encoded_feature_names": preprocessor.feature_names,
         },
         "target": TARGET,
+        "target_classes": {"0": "On-time", "1": "Late"},
         "training_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "random_seed": SEED,
         "selected_primary_model": primary_model,
@@ -472,19 +582,31 @@ def train_and_evaluate_all(base_dir: Path | None = None) -> dict:
     with open(models_dir / "xgboost.json", "w", encoding="utf-8") as f:
         json.dump(xgb_data, f)
 
-    print("RANDOM FOREST RESULTS:")
-    print(f"  Validation -> Accuracy: {rf_val_metrics['accuracy']}, Recall: {rf_val_metrics['recall']}, F1: {rf_val_metrics['f1_score']}, ROC-AUC: {rf_val_metrics['roc_auc']}, PR-AUC: {rf_val_metrics['pr_auc']}")
-    print(f"  Test       -> Accuracy: {rf_test_metrics['accuracy']}, Recall: {rf_test_metrics['recall']}, F1: {rf_test_metrics['f1_score']}, ROC-AUC: {rf_test_metrics['roc_auc']}, PR-AUC: {rf_test_metrics['pr_auc']}")
-    print(f"  Confusion Matrix (Test): TN={rf_test_metrics['confusion_matrix']['tn']}, FP={rf_test_metrics['confusion_matrix']['fp']}, FN={rf_test_metrics['confusion_matrix']['fn']}, TP={rf_test_metrics['confusion_matrix']['tp']}")
-    print("-" * 70)
-    print("XGBOOST RESULTS:")
-    print(f"  Validation -> Accuracy: {xgb_val_metrics['accuracy']}, Recall: {xgb_val_metrics['recall']}, F1: {xgb_val_metrics['f1_score']}, ROC-AUC: {xgb_val_metrics['roc_auc']}, PR-AUC: {xgb_val_metrics['pr_auc']}")
-    print(f"  Test       -> Accuracy: {xgb_test_metrics['accuracy']}, Recall: {xgb_test_metrics['recall']}, F1: {xgb_test_metrics['f1_score']}, ROC-AUC: {xgb_test_metrics['roc_auc']}, PR-AUC: {xgb_test_metrics['pr_auc']}")
-    print(f"  Confusion Matrix (Test): TN={xgb_test_metrics['confusion_matrix']['tn']}, FP={xgb_test_metrics['confusion_matrix']['fp']}, FN={xgb_test_metrics['confusion_matrix']['fn']}, TP={xgb_test_metrics['confusion_matrix']['tp']}")
-    print("-" * 70)
-    print(f"RECOMMENDED PRIMARY MODEL: {primary_model}")
-    print(f"Model artifacts and metadata successfully saved to: {models_dir}")
-    print("=" * 70)
+    print("=" * 75)
+    print("MODEL EVALUATION RESULTS (TEST SET):")
+    print("=" * 75)
+    print("XGBOOST METRICS:")
+    print(f"  Accuracy:  {xgb_test_metrics['accuracy']:.4f}")
+    print(f"  Precision: {xgb_test_metrics['precision']:.4f}")
+    print(f"  Recall:    {xgb_test_metrics['recall']:.4f}")
+    print(f"  F1-Score:  {xgb_test_metrics['f1_score']:.4f}")
+    print(f"  ROC-AUC:   {xgb_test_metrics['roc_auc']:.4f}")
+    print(f"  PR-AUC:    {xgb_test_metrics['pr_auc']:.4f}")
+    print(f"  Confusion Matrix: TN={xgb_test_metrics['confusion_matrix']['tn']}, FP={xgb_test_metrics['confusion_matrix']['fp']}, FN={xgb_test_metrics['confusion_matrix']['fn']}, TP={xgb_test_metrics['confusion_matrix']['tp']}")
+    print("-" * 75)
+    print("RANDOM FOREST METRICS:")
+    print(f"  Accuracy:  {rf_test_metrics['accuracy']:.4f}")
+    print(f"  Precision: {rf_test_metrics['precision']:.4f}")
+    print(f"  Recall:    {rf_test_metrics['recall']:.4f}")
+    print(f"  F1-Score:  {rf_test_metrics['f1_score']:.4f}")
+    print(f"  ROC-AUC:   {rf_test_metrics['roc_auc']:.4f}")
+    print(f"  PR-AUC:    {rf_test_metrics['pr_auc']:.4f}")
+    print(f"  Confusion Matrix: TN={rf_test_metrics['confusion_matrix']['tn']}, FP={rf_test_metrics['confusion_matrix']['fp']}, FN={rf_test_metrics['confusion_matrix']['fn']}, TP={rf_test_metrics['confusion_matrix']['tp']}")
+    print("=" * 75)
+    print(f"SELECTED PRIMARY MODEL: {primary_model}")
+    print(f"Artifacts successfully saved to: {models_dir}")
+    print("=" * 75)
+
     return metadata
 
 

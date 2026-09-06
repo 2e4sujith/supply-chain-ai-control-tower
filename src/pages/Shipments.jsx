@@ -20,6 +20,7 @@ function Shipments() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [modalError, setModalError] = useState('')
   const [saving, setSaving] = useState(false)
 
   const load = async () => {
@@ -101,13 +102,17 @@ function Shipments() {
 
   const handleCreate = async (shipment) => {
     setSaving(true)
+    setModalError('')
     setError('')
     try {
       const created = await createShipment(shipment)
-      setShipments((current) => [created, ...current])
+      setShipments((current) => {
+        if (current.some((s) => s.id === created.id)) return current
+        return [created, ...current]
+      })
       setIsModalOpen(false)
     } catch (err) {
-      setError(err.message)
+      setModalError(err.message || 'Unable to create shipment.')
     } finally {
       setSaving(false)
     }
@@ -129,7 +134,13 @@ function Shipments() {
           <h1>Shipments</h1>
           <p>Track and manage every movement across your supply chain.</p>
         </div>
-        <button className="primary-button" onClick={() => setIsModalOpen(true)}>
+        <button
+          className="primary-button"
+          onClick={() => {
+            setModalError('')
+            setIsModalOpen(true)
+          }}
+        >
           <Plus size={17} /> Add Shipment
         </button>
       </section>
@@ -195,7 +206,11 @@ function Shipments() {
       {isModalOpen && (
         <AddShipmentModal
           disabled={saving}
-          onClose={() => setIsModalOpen(false)}
+          error={modalError}
+          onClose={() => {
+            setModalError('')
+            setIsModalOpen(false)
+          }}
           onCreate={handleCreate}
         />
       )}

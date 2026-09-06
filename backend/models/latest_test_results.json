@@ -1,0 +1,692 @@
+{
+  "low_risk": {
+    "shipment_id": null,
+    "disruption_probability": 0.3225,
+    "risk_score": 32,
+    "risk_level": "LOW",
+    "top_risk_factors": [
+      {
+        "feature": "Latitude",
+        "display_name": "Destination Latitude",
+        "value": 18.25,
+        "shap_value": 0.2349,
+        "absolute_importance": 0.2349,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination Latitude (18.25) increases disruption probability."
+      },
+      {
+        "feature": "order_hour",
+        "display_name": "Order Placement Hour",
+        "value": 14.0,
+        "shap_value": 0.1742,
+        "absolute_importance": 0.1742,
+        "impact": "INCREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Placement Hour (14.0) increases disruption probability."
+      },
+      {
+        "feature": "Longitude",
+        "display_name": "Destination Longitude",
+        "value": -66.0,
+        "shap_value": 0.1338,
+        "absolute_importance": 0.1338,
+        "impact": "INCREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Destination Longitude (-66.0) increases disruption probability."
+      },
+      {
+        "feature": "Order Item Profit Ratio",
+        "display_name": "Profit Ratio",
+        "value": 0.27,
+        "shap_value": 0.0791,
+        "absolute_importance": 0.0791,
+        "impact": "INCREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Profit Ratio (0.27) increases disruption probability."
+      },
+      {
+        "feature": "Order Item Discount",
+        "display_name": "Discount Amount ($)",
+        "value": 18.5,
+        "shap_value": 0.074,
+        "absolute_importance": 0.074,
+        "impact": "INCREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Discount Amount ($) (18.5) increases disruption probability."
+      }
+    ],
+    "protective_factors": [
+      {
+        "feature": "Days for shipment (scheduled)",
+        "display_name": "Scheduled Shipping SLA (Days)",
+        "value": 4.0,
+        "shap_value": -0.3313,
+        "absolute_importance": 0.3313,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Scheduled delivery window is 4 days, providing ample buffer time."
+      },
+      {
+        "feature": "Shipping Mode",
+        "display_name": "Shipping Mode",
+        "value": "Standard Class",
+        "shap_value": -0.3255,
+        "absolute_importance": 0.3255,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Standard Class shipping tier ensures prioritized transit lane routing."
+      },
+      {
+        "feature": "Order Region",
+        "display_name": "Order Region",
+        "value": "West of USA ",
+        "shap_value": -0.2235,
+        "absolute_importance": 0.2235,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination region (West of USA ) operates with stable delivery clearance."
+      },
+      {
+        "feature": "order_dayofweek",
+        "display_name": "Order Day of Week",
+        "value": 2.0,
+        "shap_value": -0.1414,
+        "absolute_importance": 0.1414,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Day of Week (2.0) decreases disruption probability."
+      },
+      {
+        "feature": "order_month",
+        "display_name": "Order Month",
+        "value": 6.0,
+        "shap_value": -0.1332,
+        "absolute_importance": 0.1332,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Month (6.0) decreases disruption probability."
+      }
+    ],
+    "factors": [
+      {
+        "name": "Destination Latitude",
+        "severity": "CRITICAL"
+      },
+      {
+        "name": "Order Placement Hour",
+        "severity": "HIGH"
+      },
+      {
+        "name": "Destination Longitude",
+        "severity": "HIGH"
+      }
+    ],
+    "model": "XGBoost",
+    "model_name": "XGBoost (DataCo Disruption Risk v2.0)",
+    "base_value": 0.1102,
+    "shap_values": {
+      "Days for shipment (scheduled)": -0.3313,
+      "Shipping Mode": -0.3255,
+      "Latitude": 0.2349,
+      "Order Region": -0.2235,
+      "order_hour": 0.1742,
+      "order_dayofweek": -0.1414,
+      "Longitude": 0.1338,
+      "order_month": -0.1332,
+      "Department Name": -0.1223,
+      "Order Profit Per Order": -0.1087,
+      "Customer Segment": -0.0797,
+      "Order Item Profit Ratio": 0.0791,
+      "Order Item Discount": 0.074,
+      "Order Item Total": -0.073,
+      "Type": 0.0371,
+      "Market": -0.035,
+      "Order Item Discount Rate": 0.0303,
+      "Order Item Product Price": -0.022,
+      "Order Item Quantity": -0.0201
+    },
+    "external_disruptions_used": true,
+    "weather_events_count": 2,
+    "port_events_count": 2,
+    "traffic_events_count": 2,
+    "data_sources": [
+      "Live OpenFreight Highway & Rail Telemetry",
+      "Live PortWatch & AIS Maritime Telemetry",
+      "Open-Meteo Real-Time Weather API"
+    ],
+    "is_mock_fallback_used": false,
+    "applied_disruption_events": [
+      {
+        "event_id": "DIS-WEA-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 10.0,
+        "location_name": "Shanghai",
+        "title": "Clear Skies at Shanghai Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-CNSHA-1788684406",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "HIGH",
+        "severity_score": 78.0,
+        "location_name": "Port of Shanghai (Yangshan & Waigaoqiao)",
+        "title": "High Berth Occupancy & Container Yard Backlog (CNSHA)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "TRAFFIC",
+        "severity": "MEDIUM",
+        "severity_score": 52.0,
+        "location_name": "G42 Shanghai-Chengdu Expressway & S2 Yangshan Highway",
+        "title": "Yangshan Port S2 Expressway Heavy Container Flow",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      },
+      {
+        "event_id": "DIS-WEA-LIVE-LONG BEACH-1788684407",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 25.0,
+        "location_name": "Long Beach",
+        "title": "Overcast at Long Beach Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-USLGB-1788684407",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "CRITICAL",
+        "severity_score": 88.0,
+        "location_name": "Port of Long Beach (Pier 400 & Middle Harbor)",
+        "title": "Severe Berth & Container Yard Congestion (USLGB)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-LOS ANGELES-1788684407",
+        "disruption_type": "TRAFFIC",
+        "severity": "HIGH",
+        "severity_score": 80.0,
+        "location_name": "I-710 Long Beach Freeway & Alameda Rail Corridor",
+        "title": "Heavy I-710 Drayage Truck Corridor Congestion",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      }
+    ]
+  },
+  "medium_risk": {
+    "shipment_id": null,
+    "disruption_probability": 0.3225,
+    "risk_score": 32,
+    "risk_level": "LOW",
+    "top_risk_factors": [
+      {
+        "feature": "Latitude",
+        "display_name": "Destination Latitude",
+        "value": 18.25,
+        "shap_value": 0.2349,
+        "absolute_importance": 0.2349,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination Latitude (18.25) increases disruption probability."
+      },
+      {
+        "feature": "order_hour",
+        "display_name": "Order Placement Hour",
+        "value": 14.0,
+        "shap_value": 0.1742,
+        "absolute_importance": 0.1742,
+        "impact": "INCREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Placement Hour (14.0) increases disruption probability."
+      },
+      {
+        "feature": "Longitude",
+        "display_name": "Destination Longitude",
+        "value": -66.0,
+        "shap_value": 0.1338,
+        "absolute_importance": 0.1338,
+        "impact": "INCREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Destination Longitude (-66.0) increases disruption probability."
+      },
+      {
+        "feature": "Order Item Profit Ratio",
+        "display_name": "Profit Ratio",
+        "value": 0.27,
+        "shap_value": 0.0791,
+        "absolute_importance": 0.0791,
+        "impact": "INCREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Profit Ratio (0.27) increases disruption probability."
+      },
+      {
+        "feature": "Order Item Discount",
+        "display_name": "Discount Amount ($)",
+        "value": 18.5,
+        "shap_value": 0.074,
+        "absolute_importance": 0.074,
+        "impact": "INCREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Discount Amount ($) (18.5) increases disruption probability."
+      }
+    ],
+    "protective_factors": [
+      {
+        "feature": "Days for shipment (scheduled)",
+        "display_name": "Scheduled Shipping SLA (Days)",
+        "value": 4.0,
+        "shap_value": -0.3313,
+        "absolute_importance": 0.3313,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Scheduled delivery window is 4 days, providing ample buffer time."
+      },
+      {
+        "feature": "Shipping Mode",
+        "display_name": "Shipping Mode",
+        "value": "Standard Class",
+        "shap_value": -0.3255,
+        "absolute_importance": 0.3255,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Standard Class shipping tier ensures prioritized transit lane routing."
+      },
+      {
+        "feature": "Order Region",
+        "display_name": "Order Region",
+        "value": "West of USA ",
+        "shap_value": -0.2235,
+        "absolute_importance": 0.2235,
+        "impact": "DECREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination region (West of USA ) operates with stable delivery clearance."
+      },
+      {
+        "feature": "order_dayofweek",
+        "display_name": "Order Day of Week",
+        "value": 2.0,
+        "shap_value": -0.1414,
+        "absolute_importance": 0.1414,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Day of Week (2.0) decreases disruption probability."
+      },
+      {
+        "feature": "order_month",
+        "display_name": "Order Month",
+        "value": 6.0,
+        "shap_value": -0.1332,
+        "absolute_importance": 0.1332,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Month (6.0) decreases disruption probability."
+      }
+    ],
+    "factors": [
+      {
+        "name": "Destination Latitude",
+        "severity": "CRITICAL"
+      },
+      {
+        "name": "Order Placement Hour",
+        "severity": "HIGH"
+      },
+      {
+        "name": "Destination Longitude",
+        "severity": "HIGH"
+      }
+    ],
+    "model": "XGBoost",
+    "model_name": "XGBoost (DataCo Disruption Risk v2.0)",
+    "base_value": 0.1102,
+    "shap_values": {
+      "Days for shipment (scheduled)": -0.3313,
+      "Shipping Mode": -0.3255,
+      "Latitude": 0.2349,
+      "Order Region": -0.2235,
+      "order_hour": 0.1742,
+      "order_dayofweek": -0.1414,
+      "Longitude": 0.1338,
+      "order_month": -0.1332,
+      "Department Name": -0.1223,
+      "Order Profit Per Order": -0.1087,
+      "Customer Segment": -0.0797,
+      "Order Item Profit Ratio": 0.0791,
+      "Order Item Discount": 0.074,
+      "Order Item Total": -0.073,
+      "Type": 0.0371,
+      "Market": -0.035,
+      "Order Item Discount Rate": 0.0303,
+      "Order Item Product Price": -0.022,
+      "Order Item Quantity": -0.0201
+    },
+    "external_disruptions_used": true,
+    "weather_events_count": 2,
+    "port_events_count": 2,
+    "traffic_events_count": 2,
+    "data_sources": [
+      "Live OpenFreight Highway & Rail Telemetry",
+      "Live PortWatch & AIS Maritime Telemetry",
+      "Open-Meteo Real-Time Weather API"
+    ],
+    "is_mock_fallback_used": false,
+    "applied_disruption_events": [
+      {
+        "event_id": "DIS-WEA-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 10.0,
+        "location_name": "Shanghai",
+        "title": "Clear Skies at Shanghai Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-CNSHA-1788684406",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "HIGH",
+        "severity_score": 78.0,
+        "location_name": "Port of Shanghai (Yangshan & Waigaoqiao)",
+        "title": "High Berth Occupancy & Container Yard Backlog (CNSHA)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "TRAFFIC",
+        "severity": "MEDIUM",
+        "severity_score": 52.0,
+        "location_name": "G42 Shanghai-Chengdu Expressway & S2 Yangshan Highway",
+        "title": "Yangshan Port S2 Expressway Heavy Container Flow",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      },
+      {
+        "event_id": "DIS-WEA-LIVE-LONG BEACH-1788684407",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 25.0,
+        "location_name": "Long Beach",
+        "title": "Overcast at Long Beach Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-USLGB-1788684407",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "CRITICAL",
+        "severity_score": 88.0,
+        "location_name": "Port of Long Beach (Pier 400 & Middle Harbor)",
+        "title": "Severe Berth & Container Yard Congestion (USLGB)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-LOS ANGELES-1788684407",
+        "disruption_type": "TRAFFIC",
+        "severity": "HIGH",
+        "severity_score": 80.0,
+        "location_name": "I-710 Long Beach Freeway & Alameda Rail Corridor",
+        "title": "Heavy I-710 Drayage Truck Corridor Congestion",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      }
+    ]
+  },
+  "high_risk": {
+    "shipment_id": null,
+    "disruption_probability": 0.7701,
+    "risk_score": 77,
+    "risk_level": "HIGH",
+    "top_risk_factors": [
+      {
+        "feature": "Days for shipment (scheduled)",
+        "display_name": "Scheduled Shipping SLA (Days)",
+        "value": 1.0,
+        "shap_value": 0.5837,
+        "absolute_importance": 0.5837,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Scheduled delivery window is 1 days, tightening delivery SLA margin."
+      },
+      {
+        "feature": "Latitude",
+        "display_name": "Destination Latitude",
+        "value": 18.25,
+        "shap_value": 0.2689,
+        "absolute_importance": 0.2689,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination Latitude (18.25) increases disruption probability."
+      },
+      {
+        "feature": "Type",
+        "display_name": "Payment Type",
+        "value": "DEBIT",
+        "shap_value": 0.2434,
+        "absolute_importance": 0.2434,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "DEBIT transaction verification adds order clearance latency."
+      },
+      {
+        "feature": "Longitude",
+        "display_name": "Destination Longitude",
+        "value": -66.0,
+        "shap_value": 0.2174,
+        "absolute_importance": 0.2174,
+        "impact": "INCREASES_RISK",
+        "magnitude": "CRITICAL",
+        "severity": "CRITICAL",
+        "description": "Destination Longitude (-66.0) increases disruption probability."
+      },
+      {
+        "feature": "order_hour",
+        "display_name": "Order Placement Hour",
+        "value": 14.0,
+        "shap_value": 0.1937,
+        "absolute_importance": 0.1937,
+        "impact": "INCREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Placement Hour (14.0) increases disruption probability."
+      }
+    ],
+    "protective_factors": [
+      {
+        "feature": "order_month",
+        "display_name": "Order Month",
+        "value": 6.0,
+        "shap_value": -0.1332,
+        "absolute_importance": 0.1332,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Month (6.0) decreases disruption probability."
+      },
+      {
+        "feature": "order_dayofweek",
+        "display_name": "Order Day of Week",
+        "value": 2.0,
+        "shap_value": -0.131,
+        "absolute_importance": 0.131,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Day of Week (2.0) decreases disruption probability."
+      },
+      {
+        "feature": "Order Profit Per Order",
+        "display_name": "Order Profit ($)",
+        "value": 17.5,
+        "shap_value": -0.1087,
+        "absolute_importance": 0.1087,
+        "impact": "DECREASES_RISK",
+        "magnitude": "HIGH",
+        "severity": "HIGH",
+        "description": "Order Profit ($) (17.5) decreases disruption probability."
+      },
+      {
+        "feature": "Customer Segment",
+        "display_name": "Customer Segment",
+        "value": "Consumer",
+        "shap_value": -0.0797,
+        "absolute_importance": 0.0797,
+        "impact": "DECREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Consumer customer order profile follows flexible delivery window."
+      },
+      {
+        "feature": "Market",
+        "display_name": "Destination Market",
+        "value": "USCA",
+        "shap_value": -0.0625,
+        "absolute_importance": 0.0625,
+        "impact": "DECREASES_RISK",
+        "magnitude": "MEDIUM",
+        "severity": "MEDIUM",
+        "description": "Market sector (USCA) maintains high on-time fulfillment rates."
+      }
+    ],
+    "factors": [
+      {
+        "name": "Scheduled Shipping SLA (Days)",
+        "severity": "CRITICAL"
+      },
+      {
+        "name": "Destination Latitude",
+        "severity": "CRITICAL"
+      },
+      {
+        "name": "Payment Type",
+        "severity": "CRITICAL"
+      }
+    ],
+    "model": "XGBoost",
+    "model_name": "XGBoost (DataCo Disruption Risk v2.0)",
+    "base_value": 0.1102,
+    "shap_values": {
+      "Days for shipment (scheduled)": 0.5837,
+      "Latitude": 0.2689,
+      "Type": 0.2434,
+      "Longitude": 0.2174,
+      "order_hour": 0.1937,
+      "order_month": -0.1332,
+      "order_dayofweek": -0.131,
+      "Order Profit Per Order": -0.1087,
+      "Order Item Profit Ratio": 0.0823,
+      "Customer Segment": -0.0797,
+      "Market": -0.0625,
+      "Order Item Total": -0.0573,
+      "Order Item Discount": 0.0485,
+      "Shipping Mode": 0.0422,
+      "Order Item Discount Rate": 0.0303,
+      "Order Item Product Price": -0.022,
+      "Order Item Quantity": -0.0201,
+      "Order Region": 0.0135,
+      "Department Name": -0.0104
+    },
+    "external_disruptions_used": true,
+    "weather_events_count": 2,
+    "port_events_count": 2,
+    "traffic_events_count": 2,
+    "data_sources": [
+      "Live OpenFreight Highway & Rail Telemetry",
+      "Live PortWatch & AIS Maritime Telemetry",
+      "Open-Meteo Real-Time Weather API"
+    ],
+    "is_mock_fallback_used": false,
+    "applied_disruption_events": [
+      {
+        "event_id": "DIS-WEA-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 10.0,
+        "location_name": "Shanghai",
+        "title": "Clear Skies at Shanghai Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-CNSHA-1788684406",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "HIGH",
+        "severity_score": 78.0,
+        "location_name": "Port of Shanghai (Yangshan & Waigaoqiao)",
+        "title": "High Berth Occupancy & Container Yard Backlog (CNSHA)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-SHANGHAI-1788684406",
+        "disruption_type": "TRAFFIC",
+        "severity": "MEDIUM",
+        "severity_score": 52.0,
+        "location_name": "G42 Shanghai-Chengdu Expressway & S2 Yangshan Highway",
+        "title": "Yangshan Port S2 Expressway Heavy Container Flow",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      },
+      {
+        "event_id": "DIS-WEA-LIVE-LONG BEACH-1788684407",
+        "disruption_type": "WEATHER",
+        "severity": "LOW",
+        "severity_score": 25.0,
+        "location_name": "Long Beach",
+        "title": "Overcast at Long Beach Logistics Hub",
+        "is_mock": false,
+        "source_provider": "Open-Meteo Real-Time Weather API"
+      },
+      {
+        "event_id": "DIS-PRT-LIVE-USLGB-1788684407",
+        "disruption_type": "PORT_CONGESTION",
+        "severity": "CRITICAL",
+        "severity_score": 88.0,
+        "location_name": "Port of Long Beach (Pier 400 & Middle Harbor)",
+        "title": "Severe Berth & Container Yard Congestion (USLGB)",
+        "is_mock": false,
+        "source_provider": "Live PortWatch & AIS Maritime Telemetry"
+      },
+      {
+        "event_id": "DIS-TRF-LIVE-LOS ANGELES-1788684407",
+        "disruption_type": "TRAFFIC",
+        "severity": "HIGH",
+        "severity_score": 80.0,
+        "location_name": "I-710 Long Beach Freeway & Alameda Rail Corridor",
+        "title": "Heavy I-710 Drayage Truck Corridor Congestion",
+        "is_mock": false,
+        "source_provider": "Live OpenFreight Highway & Rail Telemetry"
+      }
+    ]
+  }
+}

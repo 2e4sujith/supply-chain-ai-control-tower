@@ -135,9 +135,20 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Handle Pydantic request validation errors without leaking server internals."""
+    """Handle Pydantic request validation errors with clear actionable details."""
     req_id = getattr(request.state, "request_id", "req-unknown")
     logger.warning("[%s] Validation error on %s %s: %s", req_id, request.method, request.url.path, exc.errors())
+    
+    formatted_errors = []
+    error_messages = []
+    for err in exc.errors():
+        field_path = " -> ".join(str(loc) for loc in err.get("loc", []) if loc != "body") or "payload"
+        msg = err.get("msg", "Invalid value")
+        formatted_errors.append({"field": field_path, "message": msg})
+        error_messages.append(f"{field_path}: {msg}")
+    
+    detail_msg = "; ".join(error_messages) if error_messages else "Invalid request payload or parameters."
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         headers={"X-Request-ID": req_id},
@@ -145,10 +156,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": "VALIDATION_ERROR",
             "request_id": req_id,
             "status_code": 422,
-            "detail": "Invalid request payload or query parameters.",
-            "errors": [{"field": " -> ".join(str(loc) for loc in err["loc"]), "message": err["msg"]} for err in exc.errors()],
+            "detail": detail_msg,
+            "errors": formatted_errors,
         },
     )
+
 
 
 @app.exception_handler(Exception)

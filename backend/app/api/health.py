@@ -114,6 +114,7 @@ def readiness_check() -> dict:
             "routing_graph": {"status": "ready" if graph_ready else "unavailable", "engine": "NetworkX", "nodes": node_count, "edges": edge_count},
             "telemetry_providers": {"status": telemetry_status, "providers_active": providers_active, "fallback_enabled": settings.ENABLE_MOCK_FALLBACK},
             "redis_cache": redis_info,
+            "cache": redis_info,
         },
     }
 

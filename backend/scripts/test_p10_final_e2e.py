@@ -256,7 +256,7 @@ def run_all_tests():
 
             # 3. Live shipment update broadcast
             u_res = client.put(f"/api/shipments/{test_shp_id}", json={
-                "status": "Customs Hold",
+                "status": "Delayed",
                 "risk_score": 95,
                 "risk_level": "Critical",
             })
@@ -265,7 +265,7 @@ def run_all_tests():
             event = ws.receive_json()
             assert event["event"] == "shipment.updated"
             assert event["data"]["shipment_id"] == test_shp_id
-            assert event["data"]["status"] == "Customs Hold"
+            assert event["data"]["status"] == "Delayed"
 
         record(9, "WebSockets Real-Time Streaming & Events (P8)", True, f"Received ack, ping-pong, and real-time shipment.updated event")
     except Exception as e:

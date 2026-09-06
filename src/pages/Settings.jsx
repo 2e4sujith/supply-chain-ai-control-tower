@@ -136,7 +136,7 @@ function Settings() {
       }
       setToast({
         type: 'success',
-        message: 'Changes saved successfully.',
+        message: 'Successfully changed',
       })
       setTimeout(() => setToast(null), 4000)
 
