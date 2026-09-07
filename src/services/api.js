@@ -1,20 +1,45 @@
+const DEFAULT_PROD_API_URL = 'https://supply-chain-ai-control-tower.onrender.com'
+const DEFAULT_PROD_WS_URL = 'wss://supply-chain-ai-control-tower.onrender.com/ws'
+
 export function getApiBaseUrl() {
     if (import.meta.env.VITE_API_BASE_URL) {
         return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
     }
     if (typeof window !== 'undefined' && window.location) {
-        const host = window.location.hostname || 'localhost'
-        return `http://${host}:8000`
+        const host = window.location.hostname
+        if (host === 'localhost' || host === '127.0.0.1') {
+            return `http://${host}:8000`
+        }
+        return DEFAULT_PROD_API_URL
     }
-    return 'http://127.0.0.1:8000'
+    return DEFAULT_PROD_API_URL
 }
 
 export function getWsUrl() {
-    if (import.meta.env.VITE_WS_URL) {
-        return import.meta.env.VITE_WS_URL
+    let wsUrl = import.meta.env.VITE_WS_URL
+    if (wsUrl && typeof wsUrl === 'string' && wsUrl.trim()) {
+        wsUrl = wsUrl.trim()
+        if (wsUrl.startsWith('http://')) {
+            wsUrl = wsUrl.replace(/^http:\/\//, 'ws://')
+        } else if (wsUrl.startsWith('https://')) {
+            wsUrl = wsUrl.replace(/^https:\/\//, 'wss://')
+        }
+        return wsUrl.replace(/\/$/, '')
     }
-    const base = getApiBaseUrl().replace(/^http/, 'ws')
-    return `${base}/ws`
+
+    const apiBase = getApiBaseUrl()
+    if (apiBase === DEFAULT_PROD_API_URL) {
+        return DEFAULT_PROD_WS_URL
+    }
+
+    let wsBase = apiBase
+    if (wsBase.startsWith('https://')) {
+        wsBase = wsBase.replace(/^https:\/\//, 'wss://')
+    } else if (wsBase.startsWith('http://')) {
+        wsBase = wsBase.replace(/^http:\/\//, 'ws://')
+    }
+
+    return `${wsBase.replace(/\/$/, '')}/ws`
 }
 
 async function request(path, options = {}) {
@@ -27,25 +52,27 @@ async function request(path, options = {}) {
             headers: { 'Content-Type': 'application/json', ...options.headers },
             ...options,
         })
-    } catch (err) {
-        // Fallback 1: Alternate loopback address (127.0.0.1 <-> localhost)
-        try {
-            const alternateHost = baseUrl.includes('localhost') ? 'http://127.0.0.1:8000' : 'http://localhost:8000'
-            response = await fetch(`${alternateHost}${path}`, {
-                headers: { 'Content-Type': 'application/json', ...options.headers },
-                ...options,
-            })
-        } catch {
-            // Fallback 2: Relative path (Vite Dev Server proxy)
+    } catch {
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        if (isLocal) {
             try {
-                response = await fetch(path, {
+                const alternateHost = baseUrl.includes('localhost') ? 'http://127.0.0.1:8000' : 'http://localhost:8000'
+                response = await fetch(`${alternateHost}${path}`, {
                     headers: { 'Content-Type': 'application/json', ...options.headers },
                     ...options,
                 })
-            } catch (finalErr) {
-                console.error(`Network request failed for ${url}:`, finalErr)
-                throw new Error('Backend server is unavailable.')
+            } catch {
+                try {
+                    response = await fetch(path, {
+                        headers: { 'Content-Type': 'application/json', ...options.headers },
+                        ...options,
+                    })
+                } catch {
+                    throw new Error('Backend server is unavailable.')
+                }
             }
+        } else {
+            throw new Error('Backend server is unavailable.')
         }
     }
 
@@ -276,26 +303,44 @@ class WebSocketService {
         this.isExplicitlyClosed = false
     }
 
+    getStatus() {
+        return {
+            connected: Boolean(this.isConnected && this.socket && this.socket.readyState === WebSocket.OPEN),
+            readyState: this.socket ? this.socket.readyState : (typeof WebSocket !== 'undefined' ? WebSocket.CLOSED : 3),
+            url: getWsUrl(),
+        }
+    }
+
     connect() {
-        if (typeof window === 'undefined') return
+        if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return
+
+        // If already connected or currently connecting, do not duplicate
         if (this.socket && (this.socket.readyState === WebSocket.CONNECTING || this.socket.readyState === WebSocket.OPEN)) {
             return
         }
 
         this.isExplicitlyClosed = false
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer)
+            this.reconnectTimer = null
+        }
+
         const wsUrl = getWsUrl()
 
         try {
-            this.socket = new WebSocket(wsUrl)
+            const socket = new WebSocket(wsUrl)
+            this.socket = socket
 
-            this.socket.onopen = () => {
+            socket.onopen = () => {
+                if (this.socket !== socket) return
                 this.isConnected = true
                 this.reconnectAttempts = 0
                 this._notify('connection.status', { connected: true })
                 this._startHeartbeat()
             }
 
-            this.socket.onmessage = (event) => {
+            socket.onmessage = (event) => {
+                if (this.socket !== socket) return
                 try {
                     const parsed = JSON.parse(event.data)
                     const eventName = parsed.event || 'message'
@@ -306,11 +351,13 @@ class WebSocketService {
                 }
             }
 
-            this.socket.onerror = () => {
-                // Handled in onclose
+            socket.onerror = () => {
+                if (this.socket !== socket) return
+                // Error triggers onclose
             }
 
-            this.socket.onclose = () => {
+            socket.onclose = () => {
+                if (this.socket !== socket) return
                 this.isConnected = false
                 this._stopHeartbeat()
                 this._notify('connection.status', { connected: false })
@@ -319,7 +366,11 @@ class WebSocketService {
                 }
             }
         } catch {
-            this._scheduleReconnect()
+            this.isConnected = false
+            this._notify('connection.status', { connected: false })
+            if (!this.isExplicitlyClosed) {
+                this._scheduleReconnect()
+            }
         }
     }
 
@@ -327,9 +378,13 @@ class WebSocketService {
         this._stopHeartbeat()
         this.pingTimer = setInterval(() => {
             if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                this.socket.send(JSON.stringify({ type: 'ping' }))
+                try {
+                    this.socket.send(JSON.stringify({ type: 'ping' }))
+                } catch {
+                    // Ignore transient send errors
+                }
             }
-        }, 30000)
+        }, 25000)
     }
 
     _stopHeartbeat() {
@@ -340,12 +395,14 @@ class WebSocketService {
     }
 
     _scheduleReconnect() {
-        if (this.reconnectTimer) return
+        if (this.reconnectTimer || this.isExplicitlyClosed) return
         this.reconnectAttempts++
         const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), this.maxReconnectDelay)
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null
-            this.connect()
+            if (!this.isExplicitlyClosed) {
+                this.connect()
+            }
         }, delay)
     }
 
@@ -354,6 +411,16 @@ class WebSocketService {
             this.listeners.set(event, new Set())
         }
         this.listeners.get(event).add(callback)
+
+        // If subscribing to connection.status, immediately notify with current live state
+        if (event === 'connection.status') {
+            const isCurrentlyOpen = Boolean(this.isConnected && this.socket && this.socket.readyState === WebSocket.OPEN)
+            try {
+                callback({ connected: isCurrentlyOpen })
+            } catch {
+                // Ignore
+            }
+        }
 
         if (!this.isConnected && (!this.socket || this.socket.readyState === WebSocket.CLOSED)) {
             this.connect()
@@ -376,8 +443,8 @@ class WebSocketService {
             for (const cb of this.listeners.get(event)) {
                 try {
                     cb(data)
-                } catch (err) {
-                    console.error(`[WebSocket] Listener error for ${event}:`, err)
+                } catch {
+                    // Suppress subscriber execution error
                 }
             }
         }
@@ -391,10 +458,16 @@ class WebSocketService {
             this.reconnectTimer = null
         }
         if (this.socket) {
-            this.socket.close()
+            const s = this.socket
             this.socket = null
+            try {
+                s.close()
+            } catch {
+                // Ignore
+            }
         }
         this.isConnected = false
+        this._notify('connection.status', { connected: false })
     }
 }
 

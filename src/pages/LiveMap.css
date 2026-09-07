@@ -1372,3 +1372,1016 @@
         margin-top: 23px;
     }
 }
+
+/* ==========================================================================
+   Real Geographic Leaflet Control Tower Map
+   ========================================================================== */
+.real-leaflet-map {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 570px;
+    background: #e2ede8;
+    overflow: hidden;
+}
+
+.leaflet-map-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.leaflet-container {
+    font-family: inherit;
+    background-color: #dbeae2;
+}
+
+.real-leaflet-map .map-badge {
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 4px 12px rgba(24, 52, 58, 0.08);
+}
+
+.criterion-indicator {
+    color: #174b54;
+    font-weight: 700;
+}
+
+.real-leaflet-map .map-coordinates {
+    z-index: 1000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(72, 133, 113, 0.18);
+    box-shadow: 0 4px 12px rgba(24, 52, 58, 0.06);
+}
+
+.real-leaflet-map .map-legend {
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 14px rgba(24, 52, 58, 0.08);
+}
+
+.legend-node-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2e7e8a;
+    display: inline-block;
+}
+
+.legend-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+    display: inline-block;
+}
+
+.real-leaflet-map .map-scale {
+    z-index: 1000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(72, 133, 113, 0.18);
+    box-shadow: 0 4px 12px rgba(24, 52, 58, 0.06);
+}
+
+.corridor-stat {
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #edf6f2;
+    color: #215949;
+    font-size: 8.5px;
+    font-weight: 700;
+}
+
+/* Floating Controls Toolbar (Fit, Zoom, Style switch) */
+.map-floating-controls {
+    position: absolute;
+    z-index: 1000;
+    top: 72px;
+    right: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.map-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(72, 133, 113, 0.25);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    color: #275b55;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.map-control-btn:hover {
+    background: #f0faf5;
+    color: #174b54;
+    border-color: #2e7e8a;
+    transform: translateY(-1px);
+}
+
+.map-style-toggles {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+    padding: 3px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(72, 133, 113, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.map-style-btn {
+    padding: 4px 7px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: #5d7e77;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.map-style-btn:hover {
+    background: #eef7f3;
+    color: #215949;
+}
+
+.map-style-btn.active {
+    background: #2e7e8a;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(46, 126, 138, 0.3);
+}
+
+/* Custom Marker Pins */
+.ct-marker {
+    background: transparent;
+    border: none;
+}
+
+.marker-pin {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.marker-pin.origin .marker-badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #059669;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+    border: 1.5px solid #fff;
+}
+
+.marker-pin.origin .marker-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #059669;
+    margin-top: 2px;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+.marker-pin.origin .marker-pulse-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 8px;
+    border: 2px solid #10b981;
+    animation: ctPulse 2s infinite;
+    opacity: 0.6;
+}
+
+.marker-pin.dest .marker-badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #0284c7;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    border: 1.5px solid #fff;
+}
+
+.marker-pin.dest .marker-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0284c7;
+    margin-top: 2px;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+.marker-pin.dest .marker-pulse-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 8px;
+    border: 2px solid #38bdf8;
+    animation: ctPulse 2s infinite;
+    opacity: 0.6;
+}
+
+@keyframes ctPulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    70% { transform: scale(1.3); opacity: 0; }
+    100% { transform: scale(1.3); opacity: 0; }
+}
+
+/* Intermediate Waypoint Pills */
+.waypoint-pill-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 7px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(46, 126, 138, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    color: #1e4b52;
+    font-size: 8.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.waypoint-pill-marker:hover {
+    transform: scale(1.08);
+    border-color: #059669;
+}
+
+.waypoint-node-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #059669;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+/* Active Shipment Radar Marker */
+.ct-shipment-radar-marker {
+    background: transparent;
+    border: none;
+}
+
+.shipment-radar-pulse {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 16px;
+    background: #18343a;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(24, 52, 58, 0.3);
+    border: 1.5px solid #e48d55;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.radar-wave {
+    position: absolute;
+    inset: -6px;
+    border-radius: 20px;
+    border: 2px solid #e48d55;
+    animation: radarPulse 1.8s infinite;
+}
+
+.radar-core {
+    display: flex;
+    align-items: center;
+    color: #e48d55;
+}
+
+@keyframes radarPulse {
+    0% { transform: scale(0.9); opacity: 0.9; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* Leaflet Custom Popups */
+.ct-leaflet-popup .leaflet-popup-content-wrapper {
+    padding: 0;
+    border-radius: 6px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(24, 52, 58, 0.18);
+    border: 1px solid #dce8e2;
+}
+
+.ct-leaflet-popup .leaflet-popup-content {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.ct-map-popup {
+    padding: 12px 14px;
+    font-family: inherit;
+    color: #2c4a48;
+}
+
+.ct-map-popup.active-vessel {
+    background: linear-gradient(180deg, #f7fbf9 0%, #ffffff 100%);
+}
+
+.ct-map-popup.hazard-popup {
+    background: #fff8f7;
+    border-top: 3px solid #ef4444;
+}
+
+.popup-header-danger {
+    color: #dc2626;
+    font-size: 10px;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.popup-type-tag {
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #e8f4f0;
+    color: #174b54;
+    font-size: 8.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.popup-type-tag.active-live {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.popup-region-tag {
+    color: #6c8882;
+    font-size: 8.5px;
+    font-weight: 600;
+}
+
+.popup-status-badge {
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: #ecfdf5;
+    color: #065f46;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.popup-title {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 800;
+    color: #18343a;
+}
+
+.popup-details {
+    font-size: 10px;
+    color: #557872;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.popup-role-badge {
+    margin-top: 6px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 8.5px;
+    font-weight: 700;
+}
+
+.popup-role-badge.org {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.popup-role-badge.dst {
+    background: #f0f9ff;
+    color: #0369a1;
+}
+
+.popup-role-badge.mid {
+    background: #f8fafc;
+    color: #475569;
+}
+
+.text-danger { color: #dc2626; font-weight: 700; }
+.text-success { color: #16a34a; font-weight: 700; }
+
+/* Custom Route Tooltip */
+.ct-route-tooltip {
+    background: #18343a !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 4px !important;
+    color: #f1f5f9 !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    padding: 4px 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+.ct-route-tooltip.optimal {
+    border-color: #10b981 !important;
+    color: #a7f3d0 !important;
+}
+
+.ct-node-tooltip {
+    background: rgba(24, 52, 58, 0.9) !important;
+    border: none !important;
+    color: #fff !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    padding: 3px 6px !important;
+    border-radius: 3px !important;
+}
+
+.unresolved-location-banner {
+    position: absolute;
+    z-index: 1000;
+    top: 65px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border-radius: 4px;
+    background: rgba(254, 242, 242, 0.95);
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 9px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+/* Intermediate Circular Node Dots (Clean & Minimalist) */
+.waypoint-dot-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+}
+
+.waypoint-inner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2e7e8a;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.waypoint-dot-marker:hover .waypoint-inner-dot {
+    transform: scale(1.4);
+    background: #059669;
+}
+
+.map-geo-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    margin-left: 4px;
+}
+
+.map-geo-status.loading {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.map-geo-status.ready {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+/* ==========================================================================
+   Address Search & Geocoded Address Panel Styles
+   ========================================================================== */
+.map-controls-header-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.address-search-box {
+    position: relative;
+    min-width: 320px;
+    max-width: 440px;
+    flex: 1;
+}
+
+.address-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.address-search-input {
+    width: 100%;
+    padding: 8px 30px 8px 30px;
+    border: 1px solid #c9ded3;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #1a3c36;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.address-search-input:focus {
+    outline: none;
+    border-color: #2e7e8a;
+    box-shadow: 0 0 0 3px rgba(46, 126, 138, 0.15);
+}
+
+.address-search-input::placeholder {
+    color: #7b9891;
+    font-size: 10.5px;
+}
+
+.search-input-icon {
+    position: absolute;
+    left: 9px;
+    color: #557870;
+    pointer-events: none;
+}
+
+.search-status-spinner {
+    position: absolute;
+    right: 9px;
+    color: #2e7e8a;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: #eef4f0;
+    color: #557870;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.search-clear-btn:hover {
+    background: #dcece2;
+    color: #174b54;
+}
+
+.address-suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #c9ded3;
+    border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(24, 52, 58, 0.14);
+    z-index: 2500;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f2f7f4;
+    transition: background 0.15s ease;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: #eef7f3;
+}
+
+.suggestion-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    color: #2e7e8a;
+}
+
+.suggestion-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.suggestion-title strong {
+    font-size: 11px;
+    color: #19313a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-type {
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #e8f4f0;
+    color: #1b5e50;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.suggestion-full-addr {
+    font-size: 9.5px;
+    color: #65847e;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selector-prefix {
+    font-size: 10px;
+    font-weight: 700;
+    color: #557870;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+/* Searched Location Banner */
+.searched-active-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 8px 14px;
+    background: #fdf8eb;
+    border: 1px solid #fae29f;
+    border-left: 4px solid #d97706;
+    border-radius: 4px;
+    animation: slideInDown 0.25s ease-out;
+}
+
+.searched-pin-icon {
+    color: #d97706;
+    flex-shrink: 0;
+}
+
+.searched-banner-text {
+    font-size: 10.5px;
+    color: #78350f;
+    flex: 1;
+}
+
+.searched-gps-text {
+    margin-left: 6px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #92400e;
+}
+
+.clear-searched-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid #f59e0b;
+    background: #ffffff;
+    color: #b45309;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.clear-searched-banner-btn:hover {
+    background: #fef3c7;
+    border-color: #d97706;
+}
+
+/* Structured Addresses Panel in Sidebar */
+.structured-addresses-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.address-card {
+    padding: 9px 11px;
+    border-radius: 5px;
+    background: #ffffff;
+    border: 1px solid #dce8e2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.15s ease;
+}
+
+.address-card.origin-card {
+    border-left: 3.5px solid #059669;
+}
+
+.address-card.dest-card {
+    border-left: 3.5px solid #0284c7;
+}
+
+.address-card.telemetry-card {
+    border-left: 3.5px solid #d97706;
+    background: #fffdf9;
+}
+
+.address-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.address-card-role {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.address-card-role.org {
+    color: #047857;
+}
+
+.address-card-role.dst {
+    color: #0369a1;
+}
+
+.address-card-role.live {
+    color: #b45309;
+}
+
+.address-type-tag {
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #f1f5f3;
+    color: #557870;
+}
+
+.address-card-title {
+    margin: 0 0 3px 0;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #19313a;
+}
+
+.address-card-full {
+    margin: 0 0 5px 0;
+    font-size: 9.5px;
+    color: #4b666d;
+    line-height: 1.35;
+}
+
+.address-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 9px;
+    color: #65847e;
+    margin-bottom: 3px;
+}
+
+.address-gps-tag {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #2e7e8a;
+    letter-spacing: 0.3px;
+}
+
+/* Searched Pin Marker */
+.ct-searched-marker {
+    background: transparent;
+    border: none;
+}
+
+.marker-pin.searched .searched-badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #d97706;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+    border: 1.5px solid #ffffff;
+}
+
+.marker-pin.searched .searched-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d97706;
+    margin-top: 2px;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.legend-searched-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d97706;
+    display: inline-block;
+}
+
+.popup-address-block {
+    margin: 6px 0;
+    padding: 5px 7px;
+    background: #f7faf8;
+    border: 1px solid #e2ebe6;
+    border-radius: 4px;
+    font-size: 9.5px;
+}
+
+.popup-address-block strong {
+    color: #2b5c50;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.popup-address-block p {
+    margin: 0;
+    color: #3b5f54;
+    line-height: 1.35;
+}
+
+.searched-tag {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+/* ==========================================================================
+   Guaranteed Address Display Section
+   ========================================================================== */
+.shipment-locations-section {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 14px;
+}
+
+.location-item {
+    padding: 10px 12px;
+    border-radius: 5px;
+    background: #ffffff;
+    border: 1px solid #dce8e2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.15s ease;
+}
+
+.location-item.origin-item {
+    border-left: 3.5px solid #059669;
+}
+
+.location-item.dest-item {
+    border-left: 3.5px solid #0284c7;
+}
+
+.location-item.telemetry-item {
+    border-left: 3.5px solid #d97706;
+    background: #fffdf9;
+}
+
+.location-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.location-badge {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.location-badge.org-badge {
+    color: #047857;
+}
+
+.location-badge.dst-badge {
+    color: #0369a1;
+}
+
+.location-badge.live-badge {
+    color: #b45309;
+}
+
+.location-raw-name {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: #19313a;
+    word-break: break-word;
+}
+
+.location-resolved-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 9.5px;
+    color: #4b666d;
+    line-height: 1.35;
+}
+
+.location-resolved-meta .resolved-text {
+    color: #335952;
+}
+
+.location-resolved-meta .gps-text {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #2e7e8a;
+    margin-top: 1px;
+}
+
+.location-unresolved-meta {
+    font-size: 9px;
+    font-weight: 600;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 3px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-top: 2px;
+}

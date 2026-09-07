@@ -85,6 +85,64 @@ def _get_factor_description(feature: str, value: Any, shap_val: float) -> str:
     return f"{FEATURE_DISPLAY_NAMES.get(feature, feature)} ({value}) {'increases' if is_risk else 'decreases'} disruption probability."
 
 
+def _clean_numeric(val: Any, default_mean: float) -> float:
+    """Safely convert any raw input into a valid, finite float."""
+    if val is None:
+        return float(default_mean)
+    if isinstance(val, (int, float)):
+        if math.isnan(val) or math.isinf(val):
+            return float(default_mean)
+        return float(val)
+    if isinstance(val, str):
+        cleaned = val.strip()
+        if not cleaned:
+            return float(default_mean)
+        # Remove currency symbols ($ , € , £), percentage signs, commas, underscores
+        cleaned = (
+            cleaned.replace("$", "")
+            .replace("€", "")
+            .replace("£", "")
+            .replace("%", "")
+            .replace(",", "")
+            .replace("_", "")
+            .strip()
+        )
+        try:
+            num = float(cleaned)
+            if math.isnan(num) or math.isinf(num):
+                return float(default_mean)
+            return num
+        except (ValueError, TypeError):
+            return float(default_mean)
+    return float(default_mean)
+
+
+def _match_category(val: Any, valid_categories: list[str]) -> Optional[str]:
+    """Matches raw categorical input to valid_categories in a case-insensitive, whitespace-trimmed manner."""
+    if val is None:
+        return None
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    # 1. Exact match
+    if val_str in valid_categories:
+        return val_str
+    # 2. Case-insensitive and whitespace-normalized match
+    val_norm = "".join(val_str.lower().split())
+    for cat in valid_categories:
+        cat_norm = "".join(cat.lower().split())
+        if val_norm == cat_norm:
+            return cat
+    # 3. Leading token match for composite categories (e.g. "standard" -> "Standard Class", "first" -> "First Class", "second" -> "Second Class")
+    val_lower = val_str.lower()
+    for cat in valid_categories:
+        cat_lower = cat.lower().strip()
+        tokens = cat_lower.split()
+        if len(tokens) > 1 and val_lower == tokens[0]:
+            return cat
+    return None
+
+
 class Preprocessor:
     def __init__(self, prep_dict: dict):
         self.cat_categories = prep_dict["cat_categories"]
@@ -95,16 +153,30 @@ class Preprocessor:
     def transform_record(self, record: dict) -> list[float]:
         vec = []
         for cat in CATEGORICAL_FEATURES:
-            val = str(record.get(cat, ""))
-            for cat_val in self.cat_categories.get(cat, []):
-                vec.append(1.0 if val == cat_val else 0.0)
+            raw_val = record.get(cat) if record else None
+            categories_for_feature = self.cat_categories.get(cat, [])
+            matched_cat = _match_category(raw_val, categories_for_feature)
+            for cat_val in categories_for_feature:
+                vec.append(1.0 if matched_cat == cat_val else 0.0)
+
         for num in NUMERICAL_FEATURES:
             mean = self.num_means.get(num, 0.0)
             std = self.num_stds.get(num, 1.0)
-            val = float(record.get(num, mean))
-            norm_val = (val - mean) / (std if std > 0 else 1.0)
-            vec.append(norm_val)
-        return vec
+            raw_val = record.get(num) if record else None
+            clean_val = _clean_numeric(raw_val, mean)
+            std_divisor = std if (std is not None and std > 1e-7) else 1.0
+            norm_val = (clean_val - mean) / std_divisor
+            if not math.isfinite(norm_val):
+                norm_val = 0.0
+            vec.append(float(norm_val))
+
+        # Enforce exact feature count and finite values
+        if len(vec) != len(self.feature_names):
+            while len(vec) < len(self.feature_names):
+                vec.append(0.0)
+            vec = vec[: len(self.feature_names)]
+
+        return [v if math.isfinite(v) else 0.0 for v in vec]
 
 
 class PureTreeSHAP:
@@ -138,23 +210,28 @@ class PureTreeSHAP:
         """Trace decision path and compute exact marginal attributions."""
         curr = node
         while "value" not in curr:
-            f_idx = curr["feature_idx"]
-            thresh = curr["threshold"]
+            f_idx = curr.get("feature_idx", 0)
+            thresh = curr.get("threshold", 0.0)
             curr_exp = curr.get("_expected", 0.0)
             
-            left_node = curr["left"]
-            right_node = curr["right"]
+            left_node = curr.get("left")
+            right_node = curr.get("right")
+            if not left_node or not right_node:
+                break
             
             left_exp = left_node.get("_expected", left_node.get("value", 0.0))
             right_exp = right_node.get("_expected", right_node.get("value", 0.0))
 
-            if x[f_idx] <= thresh:
+            feat_val = x[f_idx] if 0 <= f_idx < len(x) else 0.0
+            if feat_val <= thresh:
                 delta = left_exp - curr_exp
-                phi[f_idx] += self.learning_rate * delta
+                if 0 <= f_idx < len(phi):
+                    phi[f_idx] += self.learning_rate * delta
                 curr = left_node
             else:
                 delta = right_exp - curr_exp
-                phi[f_idx] += self.learning_rate * delta
+                if 0 <= f_idx < len(phi):
+                    phi[f_idx] += self.learning_rate * delta
                 curr = right_node
 
     def compute_shap_values(self, x: list[float]) -> tuple[float, list[float], float]:
@@ -172,6 +249,8 @@ class PureTreeSHAP:
             self._explain_single_tree(tree, x, phi)
 
         logit = phi_0 + sum(phi)
+        if not math.isfinite(logit):
+            logit = 0.0
         bounded_logit = max(-15.0, min(15.0, logit))
         prob = 1.0 / (1.0 + math.exp(-bounded_logit))
 
@@ -218,9 +297,22 @@ class ShapExplainabilityService:
         - feature_names
         """
         x_vec = self.preprocessor.transform_record(shipment_data)
-        phi_0, raw_phi, prob = self.explainer.compute_shap_values(x_vec)
+        
+        try:
+            phi_0, raw_phi, prob = self.explainer.compute_shap_values(x_vec)
+        except Exception:
+            # SHAP isolation: fallback to neutral base expectation and safe probability
+            phi_0 = self.explainer.base_score
+            raw_phi = [0.0] * len(x_vec)
+            prob = 1.0 / (1.0 + math.exp(-max(-15.0, min(15.0, phi_0))))
+
+        if not math.isfinite(prob):
+            prob = 0.5
+        prob = max(0.0, min(1.0, prob))
 
         risk_score = int(round(prob * 100.0))
+        risk_score = max(0, min(100, risk_score))
+
         if risk_score <= 34:
             risk_tier = "LOW"
         elif risk_score <= 64:
@@ -235,19 +327,20 @@ class ShapExplainabilityService:
         encoded_names = self.preprocessor.feature_names
 
         for name, val in zip(encoded_names, raw_phi):
+            val_clean = float(val) if math.isfinite(val) else 0.0
             matched = False
             for cat in CATEGORICAL_FEATURES:
                 if name.startswith(f"{cat}_"):
-                    grouped_shap[cat] += val
+                    grouped_shap[cat] += val_clean
                     matched = True
                     break
             if not matched and name in grouped_shap:
-                grouped_shap[name] += val
+                grouped_shap[name] += val_clean
 
         # Format factor dictionaries
         factors = []
         for feat_name, shap_val in grouped_shap.items():
-            raw_val = shipment_data.get(feat_name, "N/A")
+            raw_val = shipment_data.get(feat_name, "N/A") if shipment_data else "N/A"
             abs_val = abs(shap_val)
             
             if abs_val >= 0.20:
@@ -283,7 +376,7 @@ class ShapExplainabilityService:
             "predicted_probability": round(prob, 4),
             "risk_score": risk_score,
             "risk_level": risk_tier,
-            "base_value": round(phi_0, 4),
+            "base_value": round(phi_0, 4) if math.isfinite(phi_0) else 0.0,
             "top_risk_factors": positive_factors[:top_n],
             "top_protective_factors": negative_factors[:top_n],
             "all_factors_ranked": factors,

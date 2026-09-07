@@ -10,7 +10,6 @@ import {
   Package,
   Search,
   Settings,
-  ShieldAlert,
   TriangleAlert,
   X,
 } from 'lucide-react'

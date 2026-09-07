@@ -5,16 +5,17 @@ import {
   LocateFixed,
   RefreshCw,
   Route,
-  Search,
   ShieldAlert,
   Sliders,
   TrendingDown,
   Truck,
   Zap,
+  Loader2,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getAlternativeRoute, getShipments, predictRisk } from '../services/api.js'
 import DemoMap from '../components/DemoMap.jsx'
+import { geocodeAddress } from '../services/geocoding.js'
 import './LiveMap.css'
 
 function LiveMap() {
@@ -28,7 +29,13 @@ function LiveMap() {
   const [actionLoading, setActionLoading] = useState('')
   const [error, setError] = useState('')
 
-  // Phase 7.4: Continuous Real-Time Disruption & Route Monitoring
+  // Geocoded structured address state for current shipment endpoints
+  const [originLocation, setOriginLocation] = useState(null)
+  const [destinationLocation, setDestinationLocation] = useState(null)
+  const [currentLocationObj, setCurrentLocationObj] = useState(null)
+  const [addressLoading, setAddressLoading] = useState(false)
+
+  // Continuous Real-Time Disruption & Route Monitoring
   const [monitoringActive, setMonitoringActive] = useState(true)
   const [lastChecked, setLastChecked] = useState(null)
   const [pendingRecommendation, setPendingRecommendation] = useState(null)
@@ -54,7 +61,47 @@ function LiveMap() {
 
   const shipment = shipments.find(({ id }) => id === selectedId) ?? shipments[0]
 
-  // Phase 7.4: Route Continuous Monitoring & Telemetry Re-evaluation Hook
+  // Address Resolution Hook: Resolves Origin, Destination, and Current Location whenever shipment changes
+  useEffect(() => {
+    if (!shipment?.origin || !shipment?.destination) return
+
+    const controller = new AbortController()
+    let isMounted = true
+    setAddressLoading(true)
+
+    async function resolveAddresses() {
+      try {
+        const [orig, dest, curr] = await Promise.all([
+          geocodeAddress(shipment.origin, controller.signal),
+          geocodeAddress(shipment.destination, controller.signal),
+          shipment.currentLocation && !shipment.currentLocation.toLowerCase().includes('in transit')
+            ? geocodeAddress(shipment.currentLocation, controller.signal)
+            : Promise.resolve(null),
+        ])
+
+        if (!isMounted) return
+
+        setOriginLocation(orig)
+        setDestinationLocation(dest)
+        setCurrentLocationObj(curr)
+      } catch (_err) {
+        // Safe fallback
+      } finally {
+        if (isMounted) {
+          setAddressLoading(false)
+        }
+      }
+    }
+
+    resolveAddresses()
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
+  }, [shipment?.id, shipment?.origin, shipment?.destination, shipment?.currentLocation])
+
+  // Route Continuous Monitoring & Telemetry Re-evaluation Hook
   useEffect(() => {
     if (!shipment?.id || !monitoringActive) return
 
@@ -75,7 +122,6 @@ function LiveMap() {
             return latestRoute
           }
 
-          // Check if newly computed optimal path differs from the currently displayed route
           const currentPathStr = (activeRoute.recommended_route || []).join(' → ')
           const newPathStr = (latestRoute.recommended_route || []).join(' → ')
           const currentRisk = activeRoute.route_risk_after ?? activeRoute.average_risk_weight ?? 1.0
@@ -84,14 +130,12 @@ function LiveMap() {
           const newCost = latestRoute.total_cost ?? 0
 
           const pathDiffers = currentPathStr !== newPathStr
-          // A safer-route recommendation must ONLY be displayed when the newly calculated route has a strictly lower risk factor/effective cost
-          const isStrictlySafer = pathDiffers && (
-            newRisk < currentRisk - 0.005 ||
-            (latestRoute.is_strictly_safer && newRisk <= currentRisk) ||
-            (criterion === 'risk_adjusted' && newCost < currentCost - 0.1)
-          )
+          const isStrictlySafer =
+            pathDiffers &&
+            (newRisk < currentRisk - 0.005 ||
+              (latestRoute.is_strictly_safer && newRisk <= currentRisk) ||
+              (criterion === 'risk_adjusted' && newCost < currentCost - 0.1))
 
-          // If a strictly safer route is calculated, flag for user confirmation
           if (isStrictlySafer) {
             setPendingRecommendation({
               newRoute: latestRoute,
@@ -102,12 +146,10 @@ function LiveMap() {
               newPath: latestRoute.recommended_route,
               previousPath: activeRoute.recommended_route,
             })
-            return activeRoute // Preserve current user display until confirmed
+            return activeRoute
           } else {
-            // Path is identical or not strictly safer: keep active route display updated with latest telemetry
             return latestRoute
           }
-
         })
       } catch (err) {
         console.warn('Continuous route telemetry check failed:', err)
@@ -116,15 +158,12 @@ function LiveMap() {
       }
     }
 
-    // Run initial check on shipment or criterion change
     checkRouteTelemetrics(true)
 
-    // Schedule periodic polling interval (15 seconds)
     pollingTimer = setInterval(() => {
       checkRouteTelemetrics(false)
     }, 15000)
 
-    // Cleanup timer on unmount, shipment change, or when monitoring is paused
     return () => {
       isMounted = false
       if (pollingTimer) clearInterval(pollingTimer)
@@ -152,6 +191,22 @@ function LiveMap() {
     )
   }
 
+  const handleCriterionChange = async (newCriterion) => {
+    setCriterion(newCriterion)
+    setPendingRecommendation(null)
+    if (!shipment?.id) return
+    setActionLoading('route')
+    setError('')
+    try {
+      const latestRoute = await getAlternativeRoute(shipment.id, newCriterion)
+      setRoute(latestRoute)
+      setFeedback(`Dijkstra optimal route calculated under ${newCriterion.replace('_', ' ')} criterion`)
+    } catch (err) {
+      console.warn('Failed to calculate route for criterion:', err)
+    } finally {
+      setActionLoading('')
+    }
+  }
 
   const runRisk = async () => {
     setActionLoading('risk')
@@ -207,25 +262,29 @@ function LiveMap() {
           <h1>Live Map & Route Optimization</h1>
           <p>Real-time multimodal topology, risk-aware corridor analysis, and Dijkstra shortest path routing.</p>
         </div>
-        <label className="map-selector">
-          <Search size={15} />
-          <span className="sr-only">Select shipment</span>
-          <select
-            value={selectedId}
-            onChange={(event) => {
-              setSelectedId(event.target.value)
-              setFeedback('')
-              setRoute(null)
-              setRisk(null)
-            }}
-          >
-            {shipments.map(({ id, origin, destination }) => (
-              <option key={id} value={id}>
-                {id} · {origin.split(',')[0]} to {destination.split(',')[0]}
-              </option>
-            ))}
-          </select>
-        </label>
+
+        <div className="map-controls-header-group">
+          {/* Shipment Selector */}
+          <label className="map-selector">
+            <span className="selector-prefix">Shipment:</span>
+            <span className="sr-only">Select shipment</span>
+            <select
+              value={selectedId}
+              onChange={(event) => {
+                setSelectedId(event.target.value)
+                setFeedback('')
+                setRoute(null)
+                setRisk(null)
+              }}
+            >
+              {shipments.map(({ id, origin, destination }) => (
+                <option key={id} value={id}>
+                  {id} · {origin.split(',')[0]} to {destination.split(',')[0]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </section>
 
       {error && (
@@ -239,7 +298,11 @@ function LiveMap() {
         <DemoMap
           shipment={shipment}
           route={route}
+          criterion={criterion}
           alternativeRoute={Boolean(route)}
+          originLocation={originLocation}
+          destinationLocation={destinationLocation}
+          currentLocationObj={currentLocationObj}
         />
 
         <aside className="map-info-panel">
@@ -263,17 +326,72 @@ function LiveMap() {
             </div>
           </div>
 
+          {/* Guaranteed Address Display + Geographic Coordinate Resolution */}
+          <div className="shipment-locations-section">
+            {/* ORIGIN */}
+            <div className="location-item origin-item">
+              <div className="location-item-header">
+                <span className="location-badge org-badge">ORIGIN</span>
+                {addressLoading && <Loader2 size={10} className="loading-spin" />}
+              </div>
+              <div className="location-raw-name">{shipment.origin}</div>
+              {originLocation && typeof originLocation.lat === 'number' ? (
+                <div className="location-resolved-meta">
+                  <span className="resolved-text">📍 {originLocation.fullAddress || originLocation.label}</span>
+                  <span className="gps-text">
+                    GPS: {originLocation.lat.toFixed(4)}°N, {Math.abs(originLocation.lon).toFixed(4)}°{originLocation.lon >= 0 ? 'E' : 'W'}
+                  </span>
+                </div>
+              ) : (
+                <div className="location-unresolved-meta">
+                  <span>⚠️ Map coordinates unavailable</span>
+                </div>
+              )}
+            </div>
+
+            {/* DESTINATION */}
+            <div className="location-item dest-item">
+              <div className="location-item-header">
+                <span className="location-badge dst-badge">DESTINATION</span>
+                {addressLoading && <Loader2 size={10} className="loading-spin" />}
+              </div>
+              <div className="location-raw-name">{shipment.destination}</div>
+              {destinationLocation && typeof destinationLocation.lat === 'number' ? (
+                <div className="location-resolved-meta">
+                  <span className="resolved-text">📍 {destinationLocation.fullAddress || destinationLocation.label}</span>
+                  <span className="gps-text">
+                    GPS: {destinationLocation.lat.toFixed(4)}°N, {Math.abs(destinationLocation.lon).toFixed(4)}°{destinationLocation.lon >= 0 ? 'E' : 'W'}
+                  </span>
+                </div>
+              ) : (
+                <div className="location-unresolved-meta">
+                  <span>⚠️ Map coordinates unavailable</span>
+                </div>
+              )}
+            </div>
+
+            {/* CURRENT LOCATION */}
+            <div className="location-item telemetry-item">
+              <div className="location-item-header">
+                <span className="location-badge live-badge">CURRENT LOCATION</span>
+              </div>
+              <div className="location-raw-name">{shipment.currentLocation}</div>
+              {currentLocationObj && typeof currentLocationObj.lat === 'number' ? (
+                <div className="location-resolved-meta">
+                  <span className="resolved-text">📡 {currentLocationObj.fullAddress || currentLocationObj.label}</span>
+                  <span className="gps-text">
+                    GPS: {currentLocationObj.lat.toFixed(4)}°N, {Math.abs(currentLocationObj.lon).toFixed(4)}°{currentLocationObj.lon >= 0 ? 'E' : 'W'}
+                  </span>
+                </div>
+              ) : (
+                <div className="location-unresolved-meta">
+                  <span>📡 Telemetry Sector: {shipment.currentLocation}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <dl className="map-details">
-            <div>
-              <dt>Origin & Destination</dt>
-              <dd>
-                {shipment.origin.split(',')[0]} → {shipment.destination.split(',')[0]}
-              </dd>
-            </div>
-            <div>
-              <dt>Current location</dt>
-              <dd>{shipment.currentLocation}</dd>
-            </div>
             <div>
               <dt>Estimated ETA</dt>
               <dd>{shipment.eta}</dd>
@@ -296,37 +414,28 @@ function LiveMap() {
               <button
                 type="button"
                 className={`criterion-pill ${criterion === 'risk_adjusted' ? 'active' : ''}`}
-                onClick={() => {
-                  setCriterion('risk_adjusted')
-                  setRoute(null)
-                }}
+                onClick={() => handleCriterionChange('risk_adjusted')}
               >
                 <ShieldAlert size={12} /> Risk-Adjusted
               </button>
               <button
                 type="button"
                 className={`criterion-pill ${criterion === 'time' ? 'active' : ''}`}
-                onClick={() => {
-                  setCriterion('time')
-                  setRoute(null)
-                }}
+                onClick={() => handleCriterionChange('time')}
               >
                 <Zap size={12} /> Fastest Time
               </button>
               <button
                 type="button"
                 className={`criterion-pill ${criterion === 'distance' ? 'active' : ''}`}
-                onClick={() => {
-                  setCriterion('distance')
-                  setRoute(null)
-                }}
+                onClick={() => handleCriterionChange('distance')}
               >
                 <Compass size={12} /> Shortest
               </button>
             </div>
           </div>
 
-          {/* Phase 7.4: Route Continuous Monitoring Status Bar */}
+          {/* Route Continuous Monitoring Status Bar */}
           <div className="monitoring-status-bar">
             <div className="monitoring-status-indicator">
               <span className={`pulse-dot ${monitoringActive ? 'active' : 'paused'}`} />
@@ -368,7 +477,7 @@ function LiveMap() {
             </button>
           </div>
 
-          {/* Phase 7.4: Dynamic Safer Route Auto-Recommendation Banner */}
+          {/* Dynamic Safer Route Auto-Recommendation Banner */}
           {pendingRecommendation && (
             <div className="new-safer-route-alert">
               <div className="safer-alert-header">
@@ -421,7 +530,7 @@ function LiveMap() {
             </div>
           )}
 
-          {/* Real Dijkstra Route Optimization Information Card with Real-Time Risk Intelligence */}
+          {/* Real Dijkstra Route Optimization Information Card */}
           {route && (
             <div className={`route-result-card ${criterion === 'risk_adjusted' ? 'risk-adjusted-mode' : ''}`}>
               <div className="route-result-header">
@@ -429,10 +538,10 @@ function LiveMap() {
                   <Route size={14} className="route-header-icon" />
                   <strong>
                     {criterion === 'risk_adjusted'
-                      ? 'REAL-TIME RISK-AWARE ROUTE'
+                      ? 'REAL-TIME RISK-AWARE OPTIMAL ROUTE'
                       : criterion === 'distance'
-                      ? 'SHORTEST DISTANCE ROUTE'
-                      : 'FASTEST TIME ROUTE'}
+                      ? 'SHORTEST DISTANCE OPTIMAL ROUTE'
+                      : 'FASTEST TIME OPTIMAL ROUTE'}
                   </strong>
                 </div>
 
@@ -459,23 +568,22 @@ function LiveMap() {
 
                   <div className="risk-comparison-grid">
                     <div className="risk-compare-box">
-                      <span className="risk-compare-label">Current Route Risk</span>
+                      <span className="risk-compare-label">Baseline Route Risk</span>
                       <strong className="risk-compare-val before">
                         {route.route_risk_before ? `${route.route_risk_before.toFixed(2)}x` : '1.00x'}
                       </strong>
                     </div>
                     <div className="risk-compare-divider">→</div>
                     <div className="risk-compare-box recommended">
-                      <span className="risk-compare-label">Recommended Route Risk</span>
+                      <span className="risk-compare-label">Optimal Route Risk</span>
                       <strong className="risk-compare-val after">
                         {route.route_risk_after ? `${route.route_risk_after.toFixed(2)}x` : `${route.average_risk_weight?.toFixed(2)}x`}
                       </strong>
                       {route.route_risk_after && route.route_risk_before && route.route_risk_after < route.route_risk_before - 0.005 ? (
                         <span className="risk-reduction-pill">↓ {(route.route_risk_before - route.route_risk_after).toFixed(2)}x safer</span>
                       ) : (
-                        <span className="risk-neutral-pill">Resilient Corridor</span>
+                        <span className="risk-neutral-pill">Optimal Resilient Path</span>
                       )}
-
                     </div>
                   </div>
 
@@ -501,13 +609,13 @@ function LiveMap() {
 
               <div className="route-comparison">
                 <div className="route-comparison-row">
-                  <span className="route-label current-lbl">Primary Route:</span>
+                  <span className="route-label current-lbl">Primary Corridor:</span>
                   <span className="route-path-str current-str">
                     {route.current_route.join(' → ')}
                   </span>
                 </div>
                 <div className="route-comparison-row">
-                  <span className="route-label recommended-lbl">Recommended:</span>
+                  <span className="route-label recommended-lbl">Optimal Path:</span>
                   <span className="route-path-str recommended-str">
                     {route.recommended_route.join(' → ')}
                   </span>
@@ -585,7 +693,6 @@ function LiveMap() {
             </div>
           )}
 
-
           {feedback && (
             <div className="map-feedback">
               <Check size={14} /> {feedback}
@@ -594,7 +701,7 @@ function LiveMap() {
 
           <div className="map-panel-note">
             <Truck size={15} />
-            <p>Routes calculated in real-time by NetworkX Dijkstra path optimization with multi-criteria risk mitigation.</p>
+            <p>Full real-world address resolution powered by OpenStreetMap with NetworkX Dijkstra routing.</p>
           </div>
         </aside>
       </section>
@@ -603,4 +710,3 @@ function LiveMap() {
 }
 
 export default LiveMap
-

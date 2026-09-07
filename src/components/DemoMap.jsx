@@ -1,75 +1,38 @@
-import { MapPin, Navigation, Route, Anchor, Train, Truck, Plane } from 'lucide-react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import {
+  Route,
+  Anchor,
+  Train,
+  Truck,
+  Plane,
+  ZoomIn,
+  ZoomOut,
+  LocateFixed,
+  AlertCircle,
+  Loader2,
+  Zap,
+} from 'lucide-react'
+import {
+  resolvePredefinedHub,
+  geocodeAddress,
+  normalizeLocationQuery,
+} from '../services/geocoding.js'
 
-// Known supply chain node coordinates (lat, lon)
-const NODE_COORDINATES = {
-  Shanghai: { lat: 31.23, lon: 121.47, label: 'Shanghai Port' },
-  Ningbo: { lat: 29.87, lon: 121.54, label: 'Ningbo Port' },
-  Shenzhen: { lat: 22.54, lon: 114.06, label: 'Shenzhen Hub' },
-  Busan: { lat: 35.18, lon: 129.08, label: 'Busan Port' },
-  Tokyo: { lat: 35.68, lon: 139.65, label: 'Tokyo Cargo Hub' },
-  Hong_Kong: { lat: 22.32, lon: 114.17, label: 'Hong Kong Gateway' },
-  Singapore: { lat: 1.35, lon: 103.82, label: 'Singapore Hub' },
-  Ho_Chi_Minh_City: { lat: 10.82, lon: 106.63, label: 'Cat Lai Hub' },
-  Malacca_Strait: { lat: 2.50, lon: 101.50, label: 'Malacca Strait' },
-  Mumbai: { lat: 18.96, lon: 72.83, label: 'JNPT Mumbai' },
-  Dubai: { lat: 25.20, lon: 55.27, label: 'Jebel Ali Dubai' },
-  Suez_Canal: { lat: 30.59, lon: 32.57, label: 'Suez Canal' },
-  Rotterdam: { lat: 51.92, lon: 4.48, label: 'Port of Rotterdam' },
-  Hamburg: { lat: 53.55, lon: 9.99, label: 'Port of Hamburg' },
-  Antwerp: { lat: 51.22, lon: 4.40, label: 'Port of Antwerp' },
-  Frankfurt: { lat: 50.11, lon: 8.68, label: 'Frankfurt Intermodal' },
-  Long_Beach: { lat: 33.77, lon: -118.19, label: 'Port of Long Beach' },
-  Los_Angeles: { lat: 34.05, lon: -118.24, label: 'Los Angeles Hub' },
-  Oakland: { lat: 37.80, lon: -122.27, label: 'Port of Oakland' },
-  Seattle: { lat: 47.61, lon: -122.33, label: 'Port of Seattle' },
-  Chicago: { lat: 41.88, lon: -87.63, label: 'Chicago BNSF Rail' },
-  Dallas: { lat: 32.78, lon: -96.80, label: 'DFW Logistics' },
-  Atlanta: { lat: 33.75, lon: -84.39, label: 'Atlanta Hub' },
-  Phoenix: { lat: 33.45, lon: -112.07, label: 'Phoenix Hub' },
-  Oklahoma_City: { lat: 35.47, lon: -97.52, label: 'Oklahoma City Hub' },
-  Toronto: { lat: 43.65, lon: -79.38, label: 'Toronto Intermodal' },
-  Monterrey: { lat: 25.69, lon: -100.32, label: 'Monterrey Gateway' },
-  Mexico_City: { lat: 19.43, lon: -99.13, label: 'Mexico City Hub' },
-  Panama_Canal: { lat: 9.08, lon: -79.68, label: 'Panama Canal' },
-  Sydney: { lat: -33.87, lon: 151.21, label: 'Sydney Botany' },
-}
+// In-memory global cache for OSRM road geometry segments
+const osrmGeometryCache = new Map()
 
-function normalizeNodeName(name) {
-  if (!name) return ''
-  const clean = name.split(',')[0].trim().replace(/\s+/g, '_')
-  const aliases = {
-    LA: 'Los_Angeles',
-    'L.A.': 'Los_Angeles',
-    LAX: 'Los_Angeles',
-    HK: 'Hong_Kong',
-    HKG: 'Hong_Kong',
-    SZX: 'Shenzhen',
-    PVG: 'Shanghai',
-    SHA: 'Shanghai',
-    DFW: 'Dallas',
-    ORD: 'Chicago',
-    FRA: 'Frankfurt',
-    ATL: 'Atlanta',
-    SEA: 'Seattle',
-    OAK: 'Oakland',
-    LGB: 'Long_Beach',
-    RTM: 'Rotterdam',
-    HAM: 'Hamburg',
-    ANR: 'Antwerp',
-    SIN: 'Singapore',
-    PUS: 'Busan',
-    BOM: 'Mumbai',
-    DXB: 'Dubai',
-    SYD: 'Sydney',
-    YYZ: 'Toronto',
-    MEX: 'Mexico_City',
-    MTY: 'Monterrey',
-    OKC: 'Oklahoma_City',
-    PHX: 'Phoenix',
-    Ho_Chi_Minh: 'Ho_Chi_Minh_City',
-    HCM: 'Ho_Chi_Minh_City',
-  }
-  return aliases[clean] || clean
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => (d * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(Math.max(0, a)), Math.sqrt(Math.max(0, 1 - a)))
+  return R * c
 }
 
 function getModeIcon(mode) {
@@ -86,325 +49,919 @@ function getModeIcon(mode) {
   }
 }
 
-function getNodeCoord(nodeName, idx = 0, total = 1) {
-  if (!nodeName) return { lat: 30, lon: 0, label: 'Unknown' }
-  const clean = normalizeNodeName(nodeName)
-  if (NODE_COORDINATES[clean]) return NODE_COORDINATES[clean]
+function getGeodesicSegment(lat1, lon1, lat2, lon2, numPoints = 16) {
+  const toRad = (d) => (d * Math.PI) / 180
+  const toDeg = (r) => (r * 180) / Math.PI
 
-  const lower = clean.toLowerCase()
-  for (const [k, v] of Object.entries(NODE_COORDINATES)) {
-    if (k.toLowerCase() === lower || lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) {
-      return v
-    }
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(Math.max(0, a)), Math.sqrt(Math.max(0, 1 - a)))
+  const distKm = R * c
+
+  if (distKm < 350) {
+    return [
+      [lat1, lon1],
+      [lat2, lon2],
+    ]
   }
 
-  return {
-    lat: 30 + (idx / Math.max(1, total - 1)) * 15,
-    lon: 60 + (idx / Math.max(1, total - 1)) * 80,
-    label: nodeName.replace(/_/g, ' '),
-  }
-}
-
-function DemoMap({ shipment, route, alternativeRoute }) {
-  // Extract paths from Dijkstra backend route or shipment endpoints
-  const rawRecommendedPath = route?.recommended_route || (alternativeRoute ? ['Shanghai', 'Oakland', 'Los_Angeles', 'Long_Beach'] : null)
-  const rawCurrentPath = route?.current_route || [
-    shipment?.origin?.split(',')[0] || 'Shanghai',
-    shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('in transit')
-      ? shipment.currentLocation.split(',')[0]
-      : null,
-    shipment?.destination?.split(',')[0] || 'Long_Beach',
-  ].filter(Boolean)
-
-  const origClean = normalizeNodeName(shipment?.origin || rawCurrentPath[0] || 'Shanghai')
-  const origCoord = getNodeCoord(origClean)
-  const destClean = normalizeNodeName(shipment?.destination || rawCurrentPath[rawCurrentPath.length - 1] || 'Long_Beach')
-  const destCoord = getNodeCoord(destClean)
-
-  // Collect all unique node identifiers across all displayed routes
-  const allNodeNames = Array.from(
-    new Set([
-      ...(rawRecommendedPath || []),
-      ...(rawCurrentPath || []),
-      origClean,
-      destClean,
-    ])
+  const phi1 = toRad(lat1),
+    lambda1 = toRad(lon1)
+  const phi2 = toRad(lat2),
+    lambda2 = toRad(lon2)
+  const deltaLambda = lambda2 - lambda1
+  const d = Math.acos(
+    Math.max(
+      -1,
+      Math.min(1, Math.sin(phi1) * Math.sin(phi2) + Math.cos(phi1) * Math.cos(phi2) * Math.cos(deltaLambda))
+    )
   )
 
-  const allCoords = allNodeNames.map((n, i) => ({
-    name: n,
-    ...getNodeCoord(n, i, allNodeNames.length),
-  }))
+  if (isNaN(d) || d < 0.0001) {
+    return [
+      [lat1, lon1],
+      [lat2, lon2],
+    ]
+  }
 
-  // Determine if this is a Trans-Pacific crossing (lon > 40°E and lon < -40°W)
-  const hasEastAsia = allCoords.some((c) => c.lon > 40)
-  const hasAmericas = allCoords.some((c) => c.lon < -40)
-  const isPacificCrossing = hasEastAsia && hasAmericas
+  const points = []
+  for (let i = 0; i <= numPoints; i++) {
+    const f = i / numPoints
+    const A = Math.sin((1 - f) * d) / Math.sin(d)
+    const B = Math.sin(f * d) / Math.sin(d)
+    const x = A * Math.cos(phi1) * Math.cos(lambda1) + B * Math.cos(phi2) * Math.cos(lambda2)
+    const y = A * Math.cos(phi1) * Math.sin(lambda1) + B * Math.cos(phi2) * Math.sin(lambda2)
+    const z = A * Math.sin(phi1) + B * Math.sin(phi2)
+    const lat = toDeg(Math.atan2(z, Math.sqrt(x * x + y * y)))
+    const lon = toDeg(Math.atan2(y, x))
+    points.push([lat, lon])
+  }
+  return points
+}
 
-  const unwrapLons = allCoords.map((c) => (isPacificCrossing && c.lon < 0 ? c.lon + 360 : c.lon))
-  const lats = allCoords.map((c) => c.lat)
+// Fetch real road-following coordinates from public OSRM service with caching & timeout
+async function fetchOsrmSegment(lat1, lon1, lat2, lon2, signal) {
+  const cacheKey = `${lat1.toFixed(4)},${lon1.toFixed(4)}_${lat2.toFixed(4)},${lon2.toFixed(4)}`
+  if (osrmGeometryCache.has(cacheKey)) {
+    return osrmGeometryCache.get(cacheKey)
+  }
 
-  const minLon = Math.min(...unwrapLons)
-  const maxLon = Math.max(...unwrapLons)
+  const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`
+  try {
+    const res = await fetch(url, { signal })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
+      const latLngs = data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon])
+      osrmGeometryCache.set(cacheKey, latLngs)
+      return latLngs
+    }
+  } catch (_err) {
+    return null
+  }
+  return null
+}
+
+function getSegmentMode(nodeA, nodeB, routeSegments) {
+  if (routeSegments && Array.isArray(routeSegments) && routeSegments.length > 0) {
+    const seg = routeSegments.find(
+      (s) =>
+        (normalizeLocationQuery(s.origin).toLowerCase() === normalizeLocationQuery(nodeA).toLowerCase() &&
+          normalizeLocationQuery(s.destination).toLowerCase() === normalizeLocationQuery(nodeB).toLowerCase()) ||
+        (normalizeLocationQuery(s.origin).toLowerCase() === normalizeLocationQuery(nodeB).toLowerCase() &&
+          normalizeLocationQuery(s.destination).toLowerCase() === normalizeLocationQuery(nodeA).toLowerCase())
+    )
+    if (seg?.mode) return seg.mode
+  }
+  return null
+}
+
+// Synchronous baseline builder using predefined hubs or cached coordinates
+function buildSynchronousRoutePolyline(nodesWithCoords, routeSegments) {
+  if (!nodesWithCoords || nodesWithCoords.length < 2) return []
+
+  const validNodes = nodesWithCoords.filter((n) => n && n.coord && typeof n.coord.lat === 'number')
+  if (validNodes.length < 2) return []
+
+  const fullPoints = []
+  for (let i = 0; i < validNodes.length - 1; i++) {
+    const n1 = validNodes[i]
+    const n2 = validNodes[i + 1]
+    const p1 = n1.coord
+    const p2 = n2.coord
+    const distKm = calculateDistanceKm(p1.lat, p1.lon, p2.lat, p2.lon)
+    const explicitMode = getSegmentMode(n1.name, n2.name, routeSegments)
+
+    const cacheKey = `${p1.lat.toFixed(4)},${p1.lon.toFixed(4)}_${p2.lat.toFixed(4)},${p2.lon.toFixed(4)}`
+    const isRoadCandidate = explicitMode === 'Road' || (!explicitMode && distKm < 800)
+
+    let segmentPoints = null
+    if (isRoadCandidate && osrmGeometryCache.has(cacheKey)) {
+      segmentPoints = osrmGeometryCache.get(cacheKey)
+    } else {
+      segmentPoints = getGeodesicSegment(p1.lat, p1.lon, p2.lat, p2.lon, 16)
+    }
+
+    if (i > 0 && segmentPoints.length > 0) {
+      segmentPoints = segmentPoints.slice(1)
+    }
+    fullPoints.push(...segmentPoints)
+  }
+  return fullPoints
+}
+
+// Asynchronous multimodal route geometry builder (fetches OSRM for road corridors)
+async function buildAsynchronousRoutePolyline(nodesWithCoords, routeSegments, signal) {
+  if (!nodesWithCoords || nodesWithCoords.length < 2) return { points: [], hasRoad: false }
+
+  const validNodes = nodesWithCoords.filter((n) => n && n.coord && typeof n.coord.lat === 'number')
+  if (validNodes.length < 2) return { points: [], hasRoad: false }
+
+  let hasRoadSegments = false
+  const segmentPromises = []
+
+  for (let i = 0; i < validNodes.length - 1; i++) {
+    const n1 = validNodes[i]
+    const n2 = validNodes[i + 1]
+    const p1 = n1.coord
+    const p2 = n2.coord
+    const distKm = calculateDistanceKm(p1.lat, p1.lon, p2.lat, p2.lon)
+    const explicitMode = getSegmentMode(n1.name, n2.name, routeSegments)
+
+    const isRoad =
+      explicitMode === 'Road' ||
+      (!explicitMode && distKm < 800 && explicitMode !== 'Ocean' && explicitMode !== 'Air')
+
+    if (isRoad) {
+      hasRoadSegments = true
+      segmentPromises.push(
+        fetchOsrmSegment(p1.lat, p1.lon, p2.lat, p2.lon, signal).then((roadPts) => {
+          if (roadPts && roadPts.length >= 2) return roadPts
+          return getGeodesicSegment(p1.lat, p1.lon, p2.lat, p2.lon, 16)
+        })
+      )
+    } else {
+      // Ocean, Air, Rail, or Long Crossings -> Geodesic Great Circle
+      segmentPromises.push(
+        Promise.resolve(getGeodesicSegment(p1.lat, p1.lon, p2.lat, p2.lon, 20))
+      )
+    }
+  }
+
+  const resolvedSegments = await Promise.all(segmentPromises)
+  const fullPoints = []
+  for (let i = 0; i < resolvedSegments.length; i++) {
+    let seg = resolvedSegments[i]
+    if (i > 0 && seg.length > 0) {
+      seg = seg.slice(1)
+    }
+    fullPoints.push(...seg)
+  }
+  return { points: fullPoints, hasRoad: hasRoadSegments }
+}
+
+function fitMapToRoute(map, coords, animate = true) {
+  if (!map || !coords || coords.length === 0) return
+
+  if (coords.length === 1) {
+    map.flyTo([coords[0].lat, coords[0].lon], 11, { animate, duration: 0.6 })
+    return
+  }
+
+  const lats = coords.map((c) => c.lat)
+  const lons = coords.map((c) => c.lon)
   const minLat = Math.min(...lats)
   const maxLat = Math.max(...lats)
+  const minLon = Math.min(...lons)
+  const maxLon = Math.max(...lons)
 
-  const minLonSpan = 22
-  const minLatSpan = 14
-  const centerLon = (minLon + maxLon) / 2
-  const centerLat = (minLat + maxLat) / 2
+  const latSpan = maxLat - minLat
+  const lonSpan = maxLon - minLon
+  const maxSpan = Math.max(latSpan, lonSpan)
 
-  const lonSpan = Math.max(maxLon - minLon, minLonSpan)
-  const latSpan = Math.max(maxLat - minLat, minLatSpan)
+  const bounds = L.latLngBounds(coords.map((c) => [c.lat, c.lon]))
 
-  const paddedMinLon = centerLon - (lonSpan * 1.28) / 2
-  const paddedMaxLon = centerLon + (lonSpan * 1.28) / 2
-  const paddedMinLat = centerLat - (latSpan * 1.35) / 2
-  const paddedMaxLat = centerLat + (latSpan * 1.35) / 2
-
-  const CANVAS_WIDTH = 800
-  const CANVAS_HEIGHT = 520
-  const PAD_X = 85
-  const PAD_Y = 70
-
-  const project = (lat, lon) => {
-    const adjLon = isPacificCrossing && lon < 0 ? lon + 360 : lon
-    const normX = (adjLon - paddedMinLon) / (paddedMaxLon - paddedMinLon)
-    const normY = (lat - paddedMinLat) / (paddedMaxLat - paddedMinLat)
-
-    const x = PAD_X + Math.max(0, Math.min(1, normX)) * (CANVAS_WIDTH - 2 * PAD_X)
-    const y = (CANVAS_HEIGHT - PAD_Y) - Math.max(0, Math.min(1, normY)) * (CANVAS_HEIGHT - 2 * PAD_Y)
-    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }
+  let targetMaxZoom = 4
+  if (maxSpan < 0.3) {
+    targetMaxZoom = 13
+  } else if (maxSpan < 0.8) {
+    targetMaxZoom = 11
+  } else if (maxSpan < 1.8) {
+    targetMaxZoom = 9
+  } else if (maxSpan < 5.0) {
+    targetMaxZoom = 8
+  } else if (maxSpan < 15.0) {
+    targetMaxZoom = 6
+  } else {
+    targetMaxZoom = 4
   }
 
-  // Project recommended path waypoints
-  const waypoints = rawRecommendedPath
-    ? rawRecommendedPath.map((nodeName, idx) => {
-        const clean = normalizeNodeName(nodeName)
-        const coord = getNodeCoord(clean, idx, rawRecommendedPath.length)
-        const pt = project(coord.lat, coord.lon)
-        const total = rawRecommendedPath.length
-
-        return {
-          id: `${nodeName}-${idx}`,
-          name: coord.label || nodeName.replace(/_/g, ' '),
-          x: pt.x,
-          y: pt.y,
-          isOrigin: idx === 0,
-          isDestination: idx === total - 1,
-          isWaypoint: idx > 0 && idx < total - 1,
-          lat: coord.lat,
-          lon: coord.lon,
-        }
-      })
-    : null
-
-  // Project current path waypoints
-  const currentWaypoints = rawCurrentPath.map((nodeName, idx) => {
-    const clean = normalizeNodeName(nodeName)
-    const coord = getNodeCoord(clean, idx, rawCurrentPath.length)
-    const pt = project(coord.lat, coord.lon)
-    return {
-      name: coord.label || nodeName.replace(/_/g, ' '),
-      x: pt.x,
-      y: pt.y,
-    }
+  map.fitBounds(bounds, {
+    padding: [50, 50],
+    maxZoom: targetMaxZoom,
+    animate,
+    duration: 0.7,
   })
+}
 
-  // Generate smooth SVG curve through projected waypoints
-  const generateSvgPath = (pts, arcOffset = -18) => {
-    if (!pts || pts.length < 2) return ''
-    if (pts.length === 2) {
-      const mx = (pts[0].x + pts[1].x) / 2
-      const my = (pts[0].y + pts[1].y) / 2 + arcOffset
-      return `M ${pts[0].x} ${pts[0].y} Q ${mx} ${my} ${pts[1].x} ${pts[1].y}`
+function DemoMap({
+  shipment,
+  route,
+  criterion,
+  alternativeRoute,
+  originLocation,
+  destinationLocation,
+  currentLocationObj,
+}) {
+  const mapContainerRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const layersGroupRef = useRef(null)
+  const lastFitKeyRef = useRef('')
+  const [currentZoom, setCurrentZoom] = useState(4)
+  const [mapStyle, setMapStyle] = useState('voyager')
+  const [isRoadLoading, setIsRoadLoading] = useState(false)
+  const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
+  const [resolvedNodeMap, setResolvedNodeMap] = useState({})
+
+  // 1. Raw Node Names for paths
+  const rawRecommendedNames = useMemo(() => {
+    return route?.recommended_route || (alternativeRoute ? ['Shanghai', 'Oakland', 'Los_Angeles', 'Long_Beach'] : null)
+  }, [route?.recommended_route, alternativeRoute])
+
+  const rawCurrentNames = useMemo(() => {
+    return (
+      route?.current_route ||
+      [
+        shipment?.origin?.split(',')[0] || 'Shanghai',
+        shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('in transit')
+          ? shipment.currentLocation.split(',')[0]
+          : null,
+        shipment?.destination?.split(',')[0] || 'Long_Beach',
+      ].filter(Boolean)
+    )
+  }, [route?.current_route, shipment])
+
+  // 2. Geocode any node names that are not yet resolved
+  useEffect(() => {
+    const controller = new AbortController()
+    let isMounted = true
+
+    const allNames = Array.from(new Set([...(rawRecommendedNames || []), ...(rawCurrentNames || [])]))
+
+    async function resolveAllNodes() {
+      const newMap = { ...resolvedNodeMap }
+      let updated = false
+
+      // Inject explicitly passed origin, destination, and current location objects if available
+      if (originLocation && originLocation.lat) {
+        const origKey = normalizeLocationQuery(shipment?.origin || rawCurrentNames[0] || '').toLowerCase()
+        if (!newMap[origKey]) {
+          newMap[origKey] = originLocation
+          updated = true
+        }
+      }
+
+      if (destinationLocation && destinationLocation.lat) {
+        const destKey = normalizeLocationQuery(shipment?.destination || rawCurrentNames[rawCurrentNames.length - 1] || '').toLowerCase()
+        if (!newMap[destKey]) {
+          newMap[destKey] = destinationLocation
+          updated = true
+        }
+      }
+
+      for (const name of allNames) {
+        const key = normalizeLocationQuery(name).toLowerCase()
+        if (!newMap[key]) {
+          // Try predefined hub first
+          const predefined = resolvePredefinedHub(name)
+          if (predefined) {
+            newMap[key] = predefined
+            updated = true
+          } else {
+            // Geocode via Nominatim
+            const geo = await geocodeAddress(name, controller.signal)
+            if (geo) {
+              newMap[key] = geo
+              updated = true
+            }
+          }
+        }
+      }
+
+      if (isMounted && updated) {
+        setResolvedNodeMap(newMap)
+      }
     }
-    let d = `M ${pts[0].x} ${pts[0].y}`
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i]
-      const p1 = pts[i + 1]
-      const mx = (p0.x + p1.x) / 2
-      const my = (p0.y + p1.y) / 2 + (i % 2 === 0 ? arcOffset : -arcOffset * 0.4)
-      d += ` Q ${mx} ${my} ${p1.x} ${p1.y}`
+
+    resolveAllNodes()
+
+    return () => {
+      isMounted = false
+      controller.abort()
     }
-    return d
-  }
+  }, [rawRecommendedNames, rawCurrentNames, originLocation, destinationLocation, shipment])
 
-  const recommendedSvgD = waypoints
-    ? generateSvgPath(waypoints, -22)
-    : 'M 125 405 C 255 430, 375 390, 478 320 S 635 170, 705 105'
+  // Helper to get resolved coordinate for any node name
+  const getNodeCoord = useCallback(
+    (name) => {
+      if (!name) return null
+      const key = normalizeLocationQuery(name).toLowerCase()
+      if (resolvedNodeMap[key]) return resolvedNodeMap[key]
+      return resolvePredefinedHub(name)
+    },
+    [resolvedNodeMap]
+  )
 
-  const currentSvgD = currentWaypoints.length >= 2
-    ? generateSvgPath(currentWaypoints, 18)
-    : 'M 125 405 C 245 352, 290 285, 408 254 S 625 168, 705 105'
+  const origCoord = useMemo(() => {
+    if (originLocation && originLocation.lat) return originLocation
+    return getNodeCoord(shipment?.origin || rawCurrentNames[0])
+  }, [originLocation, getNodeCoord, shipment?.origin, rawCurrentNames])
 
-  // Dynamic Hazard Zone positioning centered near corridor midpoint
-  const hazardMidX = waypoints && waypoints.length > 1
-    ? (waypoints[0].x + waypoints[waypoints.length - 1].x) / 2
-    : 480
-  const hazardMidY = waypoints && waypoints.length > 1
-    ? Math.min(waypoints[0].y, waypoints[waypoints.length - 1].y) - 20
-    : 160
+  const destCoord = useMemo(() => {
+    if (destinationLocation && destinationLocation.lat) return destinationLocation
+    return getNodeCoord(shipment?.destination || rawCurrentNames[rawCurrentNames.length - 1])
+  }, [destinationLocation, getNodeCoord, shipment?.destination, rawCurrentNames])
 
-  const riskZoneD = `M ${Math.max(120, hazardMidX - 70)} ${Math.max(80, hazardMidY - 45)} ` +
-    `C ${hazardMidX - 10} ${hazardMidY - 75}, ${hazardMidX + 70} ${hazardMidY - 50}, ${hazardMidX + 105} ${hazardMidY + 10} ` +
-    `C ${hazardMidX + 135} ${hazardMidY + 70}, ${hazardMidX + 90} ${hazardMidY + 130}, ${hazardMidX + 20} ${hazardMidY + 135} ` +
-    `C ${hazardMidX - 50} ${hazardMidY + 140}, ${hazardMidX - 100} ${hazardMidY + 90}, ${hazardMidX - 90} ${hazardMidY + 30} Z`
+  // Prepare node arrays with coordinates
+  const currentNodesWithCoords = useMemo(() => {
+    return (rawCurrentNames || []).map((name) => ({ name, coord: getNodeCoord(name) }))
+  }, [rawCurrentNames, getNodeCoord])
+
+  const recNodesWithCoords = useMemo(() => {
+    if (!rawRecommendedNames) return null
+    return rawRecommendedNames.map((name) => ({ name, coord: getNodeCoord(name) }))
+  }, [rawRecommendedNames, getNodeCoord])
+
+  // Check if routes are identical
+  const isIdenticalRoute = useMemo(() => {
+    if (!rawRecommendedNames || !rawCurrentNames) return true
+    if (rawRecommendedNames.length !== rawCurrentNames.length) return false
+    return rawRecommendedNames.every(
+      (node, i) => normalizeLocationQuery(node).toLowerCase() === normalizeLocationQuery(rawCurrentNames[i]).toLowerCase()
+    )
+  }, [rawRecommendedNames, rawCurrentNames])
+
+  // Polyline Geometry Points State (Dual-phase: synchronous baseline + async OSRM upgrade)
+  const [geometryPoints, setGeometryPoints] = useState(() => ({
+    current: buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments),
+    recommended: recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null,
+  }))
+
+  // Asynchronous OSRM Road Geometry Fetching Effect
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3500)
+
+    let isMounted = true
+    setIsRoadLoading(true)
+
+    // Phase 1: Set synchronous baseline immediately
+    const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments)
+    const syncRec = recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null
+    setGeometryPoints({ current: syncCurrent, recommended: syncRec })
+
+    // Phase 2: Fetch high-precision OSRM road geometry
+    async function resolveHighPrecisionGeometry() {
+      try {
+        const [currentRes, recRes] = await Promise.all([
+          buildAsynchronousRoutePolyline(currentNodesWithCoords, route?.segments, controller.signal),
+          recNodesWithCoords
+            ? buildAsynchronousRoutePolyline(recNodesWithCoords, route?.segments, controller.signal)
+            : Promise.resolve(null),
+        ])
+
+        if (!isMounted) return
+
+        const hasRoad = currentRes.hasRoad || (recRes && recRes.hasRoad)
+        setHasRealRoadGeometry(hasRoad)
+
+        setGeometryPoints({
+          current: currentRes.points.length >= 2 ? currentRes.points : syncCurrent,
+          recommended: recRes && recRes.points.length >= 2 ? recRes.points : syncRec,
+        })
+      } catch (_err) {
+        // Retain synchronous baseline on error
+      } finally {
+        if (isMounted) {
+          setIsRoadLoading(false)
+        }
+      }
+    }
+
+    resolveHighPrecisionGeometry()
+
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+      controller.abort()
+    }
+  }, [currentNodesWithCoords, recNodesWithCoords, route?.segments])
+
+  // Initialize Leaflet Map Instance Once
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+    if (mapInstanceRef.current) return
+
+    // Clear any stale leaflet DOM id if remounting rapidly
+    if (mapContainerRef.current._leaflet_id) {
+      mapContainerRef.current._leaflet_id = null
+    }
+
+    let map = null
+    try {
+      map = L.map(mapContainerRef.current, {
+        center: [20, 78],
+        zoom: 4,
+        minZoom: 2,
+        maxZoom: 18,
+        zoomControl: false,
+        scrollWheelZoom: false, // Normal mouse scrolling scrolls webpage!
+        doubleClickZoom: true,
+        touchZoom: true,
+        boxZoom: true,
+        attributionControl: true,
+        worldCopyJump: true,
+      })
+    } catch (err) {
+      console.warn('Leaflet initialization warning:', err)
+      return
+    }
+
+    const tileLayer = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }
+    )
+    tileLayer.addTo(map)
+
+    const layersGroup = L.layerGroup().addTo(map)
+    layersGroupRef.current = layersGroup
+    mapInstanceRef.current = map
+
+    map.on('zoomend', () => {
+      setCurrentZoom(map.getZoom())
+    })
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    })
+    resizeObserver.observe(mapContainerRef.current)
+
+    return () => {
+      resizeObserver.disconnect()
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove()
+        } catch (_err) {
+          // ignore
+        }
+        mapInstanceRef.current = null
+      }
+      layersGroupRef.current = null
+    }
+  }, [])
+
+  // Handle Tile Style Switch
+  const switchMapStyle = useCallback((style) => {
+    const map = mapInstanceRef.current
+    if (!map) return
+    setMapStyle(style)
+
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        map.removeLayer(layer)
+      }
+    })
+
+    let url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    let attr =
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
+
+    if (style === 'dark') {
+      url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    } else if (style === 'osm') {
+      url = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+      attr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+    }
+
+    L.tileLayer(url, {
+      attribution: attr,
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map)
+  }, [])
+
+  // User explicitly clicks Fit Route
+  const handleFitRoute = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    const coordsToFit = []
+    if (origCoord && origCoord.lat) coordsToFit.push(origCoord)
+    if (destCoord && destCoord.lat) coordsToFit.push(destCoord)
+    if (currentNodesWithCoords) {
+      currentNodesWithCoords.forEach((n) => {
+        if (n.coord && n.coord.lat) coordsToFit.push(n.coord)
+      })
+    }
+
+    if (coordsToFit.length > 0) {
+      fitMapToRoute(map, coordsToFit, true)
+    }
+  }, [origCoord, destCoord, currentNodesWithCoords])
+
+  // Update Map Layers (Polylines, Markers, Radar Pulse)
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    const group = layersGroupRef.current
+    if (!map || !group) return
+
+    group.clearLayers()
+
+    const currentPolylinePoints = geometryPoints.current
+    const recPolylinePoints = geometryPoints.recommended
+
+    const displayedNodeItems = recNodesWithCoords || currentNodesWithCoords
+    const validCoords = []
+
+    // 1. Draw Clean Route Polylines (Differentiating Optimal Route vs Alternative Route)
+    if (isIdenticalRoute) {
+      // Single Optimal Route
+      if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
+        const singleGlow = L.polyline(currentPolylinePoints, {
+          color: '#10b981',
+          weight: 8,
+          opacity: 0.22,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+        group.addLayer(singleGlow)
+
+        const singleLine = L.polyline(currentPolylinePoints, {
+          color: '#059669',
+          weight: 4.5,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+        singleLine.bindTooltip(
+          `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'OPTIMAL'}`,
+          { sticky: true, className: 'ct-route-tooltip optimal' }
+        )
+        group.addLayer(singleLine)
+      }
+    } else {
+      // Alternative Baseline Corridor (subtle dashed line)
+      if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
+        const baselineLine = L.polyline(currentPolylinePoints, {
+          color: '#64748b',
+          weight: 3,
+          dashArray: '6, 6',
+          opacity: 0.75,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+        baselineLine.bindTooltip('Alternative Route (Baseline Corridor)', {
+          sticky: true,
+          className: 'ct-route-tooltip',
+        })
+        group.addLayer(baselineLine)
+      }
+
+      // Optimal Dijkstra Recommended Route (Dominant vibrant emerald line)
+      if (recPolylinePoints && recPolylinePoints.length >= 2) {
+        const recGlow = L.polyline(recPolylinePoints, {
+          color: '#10b981',
+          weight: 8,
+          opacity: 0.25,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+        group.addLayer(recGlow)
+
+        const recLine = L.polyline(recPolylinePoints, {
+          color: '#059669',
+          weight: 5,
+          opacity: 0.98,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+        recLine.bindTooltip(
+          `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'DIJKSTRA RECOMMENDED'}`,
+          { sticky: true, className: 'ct-route-tooltip optimal' }
+        )
+        group.addLayer(recLine)
+      }
+    }
+
+    // 2. Place Clean Professional Markers
+    const totalNodes = displayedNodeItems.length
+
+    displayedNodeItems.forEach((item, idx) => {
+      const coord = item.coord
+      if (!coord || typeof coord.lat !== 'number') return
+
+      validCoords.push(coord)
+
+      const isOrigin = idx === 0
+      const isDestination = idx === totalNodes - 1
+      const isIntermediate = !isOrigin && !isDestination
+
+      let iconHtml = ''
+      let iconClass = ''
+
+      if (isOrigin) {
+        iconClass = 'ct-marker origin-marker'
+        iconHtml = `
+          <div class="marker-pin origin">
+            <div class="marker-badge">ORG</div>
+            <div class="marker-dot"></div>
+          </div>
+        `
+      } else if (isDestination) {
+        iconClass = 'ct-marker dest-marker'
+        iconHtml = `
+          <div class="marker-pin dest">
+            <div class="marker-badge">DST</div>
+            <div class="marker-dot"></div>
+          </div>
+        `
+      } else {
+        iconClass = 'ct-marker intermediate-marker'
+        iconHtml = `
+          <div class="waypoint-dot-marker" title="${coord.label || item.name}">
+            <span class="waypoint-inner-dot"></span>
+          </div>
+        `
+      }
+
+      const customIcon = L.divIcon({
+        className: iconClass,
+        html: iconHtml,
+        iconSize: isIntermediate ? [16, 16] : [36, 36],
+        iconAnchor: isIntermediate ? [8, 8] : [18, 32],
+        popupAnchor: [0, -28],
+      })
+
+      const marker = L.marker([coord.lat, coord.lon], { icon: customIcon })
+
+      const fullAddr = coord.fullAddress || `${coord.city || item.name}, ${coord.state || ''} ${coord.country || ''}`.trim()
+      const popupHtml = `
+        <div class="ct-map-popup">
+          <div class="popup-header">
+            <span class="popup-type-tag">${coord.type || 'Logistics Hub'}</span>
+            <span class="popup-region-tag">${coord.country || 'Global'}</span>
+          </div>
+          <h4 class="popup-title">${coord.label || item.name.replace(/_/g, ' ')}</h4>
+          <div class="popup-address-block">
+            <strong>Full Address:</strong>
+            <p>${fullAddr}</p>
+          </div>
+          <div class="popup-details">
+            ${coord.city ? `<div><strong>City:</strong> ${coord.city}</div>` : ''}
+            ${coord.state ? `<div><strong>State/Region:</strong> ${coord.state}</div>` : ''}
+            <div><strong>GPS:</strong> ${coord.lat.toFixed(4)}°N, ${Math.abs(coord.lon).toFixed(4)}°${coord.lon >= 0 ? 'E' : 'W'}</div>
+            <div class="popup-role-badge ${isOrigin ? 'org' : isDestination ? 'dst' : 'mid'}">
+              ${isOrigin ? '🟢 Shipment Origin' : isDestination ? '🔵 Delivery Destination' : '⚪ Transit Waypoint'}
+            </div>
+          </div>
+        </div>
+      `
+      marker.bindPopup(popupHtml, { className: 'ct-leaflet-popup' })
+      marker.bindTooltip(coord.label || item.name.replace(/_/g, ' '), {
+        direction: 'top',
+        offset: isIntermediate ? [0, -8] : [0, -18],
+        className: 'ct-node-tooltip',
+      })
+
+      group.addLayer(marker)
+    })
+
+    // 3. Active Live Shipment Position Pulse Marker
+    const liveLocObj = currentLocationObj || getNodeCoord(shipment?.currentLocation)
+    if (liveLocObj && liveLocObj.lat && shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('delivered')) {
+      validCoords.push(liveLocObj)
+
+      const shipIcon = L.divIcon({
+        className: 'ct-shipment-radar-marker',
+        html: `
+          <div class="shipment-radar-pulse">
+            <div class="radar-wave"></div>
+            <div class="radar-core">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 17l10-10 10 10M12 7v10"/></svg>
+            </div>
+            <span class="radar-label">${shipment.id}</span>
+          </div>
+        `,
+        iconSize: [110, 32],
+        iconAnchor: [55, 16],
+      })
+
+      const liveShipmentMarker = L.marker([liveLocObj.lat, liveLocObj.lon], {
+        icon: shipIcon,
+        zIndexOffset: 1000,
+      })
+
+      liveShipmentMarker.bindPopup(`
+        <div class="ct-map-popup active-vessel">
+          <div class="popup-header">
+            <span class="popup-type-tag active-live">LIVE TELEMETRY</span>
+            <span class="popup-status-badge">${shipment.status || 'IN TRANSIT'}</span>
+          </div>
+          <h4 class="popup-title">${shipment.id}</h4>
+          <div class="popup-address-block">
+            <strong>Current Telemetry Sector:</strong>
+            <p>${liveLocObj.fullAddress || liveLocObj.label || shipment.currentLocation}</p>
+          </div>
+          <div class="popup-details">
+            <div><strong>Destination ETA:</strong> ${shipment.eta || 'On Schedule'}</div>
+            <div><strong>Priority:</strong> ${shipment.priority || 'Standard'}</div>
+            <div><strong>AI Disruption Risk:</strong> ${shipment.risk || 'LOW'} (${shipment.riskScore || 20}/100)</div>
+            <div><strong>GPS:</strong> ${liveLocObj.lat.toFixed(4)}°N, ${Math.abs(liveLocObj.lon).toFixed(4)}°${liveLocObj.lon >= 0 ? 'E' : 'W'}</div>
+          </div>
+        </div>
+      `)
+      group.addLayer(liveShipmentMarker)
+    }
+
+    // 4. Smart Camera Zoom
+    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}`
+    if (validCoords.length > 0 && lastFitKeyRef.current !== currentKey) {
+      lastFitKeyRef.current = currentKey
+      fitMapToRoute(map, validCoords, true)
+    }
+  }, [
+    geometryPoints,
+    recNodesWithCoords,
+    currentNodesWithCoords,
+    isIdenticalRoute,
+    origCoord,
+    destCoord,
+    route,
+    criterion,
+    alternativeRoute,
+    shipment,
+    currentLocationObj,
+    getNodeCoord,
+  ])
 
   return (
-    <div className="demo-map" aria-label="Live Supply Chain Route Map">
+    <div className="demo-map real-leaflet-map" aria-label="Live Supply Chain Geographic Route Map">
+      {/* Real Geographic Leaflet Map Canvas */}
+      <div ref={mapContainerRef} className="leaflet-map-canvas" />
+
+      {/* Top Left Status Badge */}
       <div className="map-badge">
         <span className="map-live-dot" />
-        {route?.algorithm ? `NETWORKX DIJKSTRA MAP` : `LIVE ROUTE VIEW`}
+        {route?.algorithm ? 'NETWORKX DIJKSTRA MAP' : 'LIVE ROUTE VIEW'}
+        {criterion && (
+          <span className="criterion-indicator">
+            · {criterion.replace('_', ' ').toUpperCase()}
+          </span>
+        )}
+        {isRoadLoading ? (
+          <span className="map-geo-status loading">
+            <Loader2 size={10} className="loading-spin" /> Road Geometry
+          </span>
+        ) : hasRealRoadGeometry ? (
+          <span className="map-geo-status ready">
+            <Zap size={10} /> Road Geometry
+          </span>
+        ) : null}
       </div>
 
+      {/* Top Right GPS Telemetry Overlay */}
       <div className="map-coordinates">
         GPS TELEMETRY
         <span>
-          LAT {origCoord.lat.toFixed(2)}° N / LNG {Math.abs(origCoord.lon).toFixed(2)}° {origCoord.lon >= 0 ? 'E' : 'W'}
+          {origCoord && origCoord.lat ? (
+            <>
+              LAT {origCoord.lat.toFixed(2)}° N / LNG {Math.abs(origCoord.lon).toFixed(2)}°{' '}
+              {origCoord.lon >= 0 ? 'E' : 'W'}
+            </>
+          ) : (
+            'CORRIDOR TELEMETRY'
+          )}{' '}
+          · ZOOM {currentZoom}X
         </span>
       </div>
 
-      {/* Background Landmass Contours */}
-      <div className="map-land land-one" />
-      <div className="map-land land-two" />
-      <div className="map-land land-three" />
-
-      {/* SVG Route Geometry Layer */}
-      <svg className="route-layer" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="recRouteGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#31845d" />
-            <stop offset="50%" stopColor="#e39a65" />
-            <stop offset="100%" stopColor="#2e7e8a" />
-          </linearGradient>
-          <filter id="routeGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="glow" />
-            <feComposite in="SourceGraphic" in2="glow" operator="over" />
-          </filter>
-        </defs>
-
-        {/* Hazard / Disruption Risk Zone */}
-        <path
-          className="risk-zone"
-          d={riskZoneD}
-        />
-
-        {/* Current / Baseline Route */}
-        <path className="route-shadow" d={currentSvgD} />
-        <path
-          className={`route-current${route || alternativeRoute ? ' route-dimmed' : ''}`}
-          d={currentSvgD}
-        />
-
-        {/* Dynamic Dijkstra Optimized Route */}
-        {(route || alternativeRoute) && (
-          <>
-            <path
-              className="route-shadow"
-              d={recommendedSvgD}
-              stroke="rgba(227, 154, 101, 0.25)"
-              strokeWidth="12"
-            />
-            <path
-              className="route-alternative route-highlighted"
-              d={recommendedSvgD}
-              stroke="url(#recRouteGrad)"
-              filter="url(#routeGlow)"
-            />
-          </>
-        )}
-      </svg>
-
-      {/* Waypoint Markers on Canvas */}
-      {waypoints ? (
-        waypoints.map((wp) => (
-          <div
-            key={wp.id}
-            className={`map-marker dynamic-waypoint ${wp.isOrigin ? 'marker-origin' : wp.isDestination ? 'marker-destination' : 'marker-intermediate'}`}
-            style={{ left: `${(wp.x / 800) * 100}%`, top: `${(wp.y / 520) * 100}%` }}
+      {/* Floating Control Tower Map Actions Toolbar */}
+      <div className="map-floating-controls">
+        <button
+          type="button"
+          className="map-control-btn"
+          title="Fit Route to View"
+          onClick={handleFitRoute}
+        >
+          <LocateFixed size={14} />
+        </button>
+        <button
+          type="button"
+          className="map-control-btn"
+          title="Zoom In"
+          onClick={() => mapInstanceRef.current?.zoomIn()}
+        >
+          <ZoomIn size={14} />
+        </button>
+        <button
+          type="button"
+          className="map-control-btn"
+          title="Zoom Out"
+          onClick={() => mapInstanceRef.current?.zoomOut()}
+        >
+          <ZoomOut size={14} />
+        </button>
+        <div className="map-style-toggles">
+          <button
+            type="button"
+            className={`map-style-btn ${mapStyle === 'voyager' ? 'active' : ''}`}
+            title="Logistics Control Tower View"
+            onClick={() => switchMapStyle('voyager')}
           >
-            {wp.isOrigin ? (
-              <>
-                <MapPin size={17} />
-                <span>{wp.name}</span>
-              </>
-            ) : wp.isDestination ? (
-              <>
-                <MapPin size={17} />
-                <span>{wp.name}</span>
-              </>
-            ) : (
-              <div className="intermediate-node-pill">
-                <span className="node-dot" />
-                <span className="node-label">{wp.name}</span>
-              </div>
-            )}
-          </div>
-        ))
-      ) : (
-        currentWaypoints.map((wp, idx) => (
-          <div
-            key={`curr-${idx}`}
-            className={`map-marker ${idx === 0 ? 'marker-origin' : idx === currentWaypoints.length - 1 ? 'marker-destination' : 'marker-current'}`}
-            style={{ left: `${(wp.x / 800) * 100}%`, top: `${(wp.y / 520) * 100}%` }}
+            Voyager
+          </button>
+          <button
+            type="button"
+            className={`map-style-btn ${mapStyle === 'dark' ? 'active' : ''}`}
+            title="Dark Operations Room View"
+            onClick={() => switchMapStyle('dark')}
           >
-            {idx === 0 ? (
-              <>
-                <MapPin size={17} />
-                <span>{wp.name}</span>
-              </>
-            ) : idx === currentWaypoints.length - 1 ? (
-              <>
-                <MapPin size={17} />
-                <span>{wp.name}</span>
-              </>
-            ) : (
-              <>
-                <span className="pulse-marker">
-                  <Navigation size={14} />
-                </span>
-                <span>{wp.name}</span>
-              </>
-            )}
-          </div>
-        ))
-      )}
-
-      {/* Risk Area Tag */}
-      <div className="map-risk-zone">
-        <span /> Weather / Congestion Hazard Zone
+            Dark
+          </button>
+          <button
+            type="button"
+            className={`map-style-btn ${mapStyle === 'osm' ? 'active' : ''}`}
+            title="OpenStreetMap Standard"
+            onClick={() => switchMapStyle('osm')}
+          >
+            OSM
+          </button>
+        </div>
       </div>
+
+      {/* Location Resolution Warning */}
+      {(!origCoord || !destCoord) && (
+        <div className="unresolved-location-banner">
+          <AlertCircle size={13} />
+          <span>
+            Geocoding notice:{' '}
+            {!origCoord ? `Origin "${shipment?.origin}"` : ''}
+            {!origCoord && !destCoord ? ' and ' : ''}
+            {!destCoord ? `Destination "${shipment?.destination}"` : ''} Location could not be resolved.
+          </span>
+        </div>
+      )}
 
       {/* Map Legend */}
       <div className="map-legend">
         <span>
-          <i className="legend-current" /> Primary Corridor
+          <i className="legend-current" /> Optimal Route
+        </span>
+        {!isIdenticalRoute && (
+          <span>
+            <i className="legend-alt" /> Alternative Route
+          </span>
+        )}
+        <span>
+          <span className="legend-node-dot" /> Logistics Hub
         </span>
         <span>
-          <i className="legend-alt" /> Dijkstra Recommended Route
-        </span>
-        <span>
-          <i className="legend-risk" /> High-Risk Zone
+          <span className="legend-live-dot" /> Live Shipment
         </span>
       </div>
 
       {/* Map Scale & Corridor Modes Footer */}
       <div className="map-scale">
         <Route size={14} />
-        {shipment?.origin?.split(',')[0] || 'Origin'}
+        {origCoord?.label || shipment?.origin?.split(',')[0] || 'Origin'}
         <span>→</span>
         {route?.transport_modes?.map((m) => (
           <span key={m} className="mode-badge" title={`Transport Mode: ${m}`}>
             {getModeIcon(m)} {m}
           </span>
         ))}
+        {route?.total_distance_km && (
+          <span className="corridor-stat">{Math.round(route.total_distance_km).toLocaleString()} km</span>
+        )}
+        {route?.total_time_hours && (
+          <span className="corridor-stat">{Math.round(route.total_time_hours)} hrs</span>
+        )}
         <span>→</span>
-        {shipment?.destination?.split(',')[0] || 'Destination'}
+        {destCoord?.label || shipment?.destination?.split(',')[0] || 'Destination'}
       </div>
     </div>
   )
 }
 
 export default DemoMap
-

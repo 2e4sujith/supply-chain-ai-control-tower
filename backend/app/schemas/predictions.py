@@ -1,8 +1,40 @@
-from typing import Any, Literal, Optional
-from pydantic import BaseModel, Field
+import math
+from typing import Any, Literal, Optional, Union
+from pydantic import BaseModel, Field, model_validator
 
 
 RiskTier = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
+
+def _coerce_numeric_input(val: Any) -> Optional[float]:
+    """Pre-clean numeric inputs from strings, numbers, or nulls."""
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        if math.isnan(val) or math.isinf(val):
+            return None
+        return float(val)
+    if isinstance(val, str):
+        cleaned = val.strip()
+        if not cleaned or cleaned.lower() in ("null", "none", "nan", "inf", "-inf", "undefined"):
+            return None
+        is_pct = cleaned.endswith("%")
+        cleaned = (
+            cleaned.replace("$", "")
+            .replace("€", "")
+            .replace("£", "")
+            .replace("%", "")
+            .replace(",", "")
+            .strip()
+        )
+        try:
+            f_val = float(cleaned)
+            if math.isnan(f_val) or math.isinf(f_val):
+                return None
+            return f_val / 100.0 if is_pct and f_val > 1.0 else f_val
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 class RiskFactor(BaseModel):
@@ -40,6 +72,109 @@ class RiskPredictionRequest(BaseModel):
     weather_severity_index: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     customs_inspection_risk: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     seasonal_disruption_factor: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Optional direct DataCo / Order features
+    shipping_mode: Optional[str] = None
+    days_for_shipment_scheduled: Optional[float] = None
+    order_item_product_price: Optional[float] = None
+    order_item_quantity: Optional[float] = None
+    order_item_discount_rate: Optional[float] = None
+    order_item_discount: Optional[float] = None
+    order_item_total: Optional[float] = None
+    order_profit_per_order: Optional[float] = None
+    order_item_profit_ratio: Optional[float] = None
+    payment_type: Optional[str] = None
+    customer_segment: Optional[str] = None
+    department_name: Optional[str] = None
+    market: Optional[str] = None
+    order_region: Optional[str] = None
+    order_date: Optional[str] = None
+    order_hour: Optional[float] = None
+    order_dayofweek: Optional[float] = None
+    order_month: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_input(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+
+        # 1. Clean and normalize shipment_id
+        if "shipment_id" in d:
+            sid = d["shipment_id"]
+            if sid is None:
+                d["shipment_id"] = None
+            elif isinstance(sid, str):
+                sid_str = sid.strip()
+                if not sid_str:
+                    d["shipment_id"] = None
+                else:
+                    sid_clean = sid_str.upper()
+                    if not sid_clean.startswith("SHP-"):
+                        if sid_clean.startswith("SHP"):
+                            sid_clean = "SHP-" + sid_clean[3:].lstrip("-_ ")
+                    d["shipment_id"] = sid_clean
+
+        # 2. Pre-coerce numeric fields
+        num_fields = [
+            "route_distance_km",
+            "planned_duration_hours",
+            "elapsed_transit_hours",
+            "transit_progress_pct",
+            "carrier_reliability_score",
+            "origin_port_congestion_index",
+            "dest_port_congestion_index",
+            "weather_severity_index",
+            "customs_inspection_risk",
+            "seasonal_disruption_factor",
+            "days_for_shipment_scheduled",
+            "order_item_product_price",
+            "order_item_quantity",
+            "order_item_discount_rate",
+            "order_item_discount",
+            "order_item_total",
+            "order_profit_per_order",
+            "order_item_profit_ratio",
+            "latitude",
+            "longitude",
+            "order_hour",
+            "order_dayofweek",
+            "order_month",
+        ]
+        for field in num_fields:
+            if field in d and d[field] is not None:
+                d[field] = _coerce_numeric_input(d[field])
+
+        # 3. Normalize progress percentage if passed in [0, 100]
+        if d.get("transit_progress_pct") is not None:
+            pct = d["transit_progress_pct"]
+            if 1.0 < pct <= 100.0:
+                d["transit_progress_pct"] = pct / 100.0
+
+        # 4. Clean strings
+        for str_field in [
+            "origin",
+            "destination",
+            "transport_mode",
+            "origin_region",
+            "destination_region",
+            "priority_level",
+            "shipping_mode",
+            "payment_type",
+            "customer_segment",
+            "department_name",
+            "market",
+            "order_region",
+            "order_date",
+        ]:
+            if str_field in d and isinstance(d[str_field], str):
+                cleaned_str = d[str_field].strip()
+                d[str_field] = cleaned_str if cleaned_str else None
+
+        return d
 
 
 class DisruptionEventSummary(BaseModel):
