@@ -308,4 +308,50 @@ class DisruptionQueryRequest(BaseModel):
     min_severity: Optional[DisruptionSeverity] = None
 
 
+class GNNPredictionResponse(BaseModel):
+    risk_score: int = Field(..., ge=0, le=100)
+    risk_probability: float = Field(..., ge=0.0, le=1.0)
+    risk_level: str
+    confidence_score: float = Field(..., ge=0.0, le=1.0)
+    attribution: dict[str, Any]
+    model_info: dict[str, Any]
+
+
+class DualModelComparisonResponse(BaseModel):
+    shipment_id: Optional[str] = None
+    origin: str
+    destination: str
+    category: str
+    xgboost: dict[str, Any]
+    gnn: dict[str, Any]
+    consensus: dict[str, Any]
+
+
+class ModelBenchmarkMetrics(BaseModel):
+    accuracy: float
+    precision: float
+    recall: float
+    f1_score: float
+    roc_auc: float
+    pr_auc: float
+    confusion_matrix: Optional[dict[str, int]] = None
+    mean_latency_ms: Optional[float] = None
+    sample_count: Optional[int] = None
+
+
+class ModelBenchmarkItem(BaseModel):
+    architecture: str
+    modality: str
+    metrics: ModelBenchmarkMetrics
+    strengths: Optional[list[str]] = None
+
+
+class ModelComparisonReportResponse(BaseModel):
+    dataset: str
+    benchmark_timestamp: str
+    test_sample_size: int
+    models: dict[str, Any]
+
+
+
 

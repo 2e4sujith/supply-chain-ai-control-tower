@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import './DemoMap.css'
 import {
   Route,
   Anchor,
@@ -22,6 +23,25 @@ import {
 
 // In-memory global cache for OSRM road geometry segments
 const osrmGeometryCache = new Map()
+
+// Key-free OpenStreetMap & CARTO Basemap Tile URLs
+const TILE_PROVIDERS = {
+  osm: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    subdomains: 'abc'
+  },
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd'
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd'
+  }
+}
 
 function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   const toRad = (d) => (d * Math.PI) / 180
@@ -105,6 +125,11 @@ function getGeodesicSegment(lat1, lon1, lat2, lon2, numPoints = 16) {
 
 // Fetch real road-following coordinates from public OSRM service with caching & timeout
 async function fetchOsrmSegment(lat1, lon1, lat2, lon2, signal) {
+  const distKm = calculateDistanceKm(lat1, lon1, lat2, lon2)
+  if (distKm > 800) {
+    return null
+  }
+
   const cacheKey = `${lat1.toFixed(4)},${lon1.toFixed(4)}_${lat2.toFixed(4)},${lon2.toFixed(4)}`
   if (osrmGeometryCache.has(cacheKey)) {
     return osrmGeometryCache.get(cacheKey)
@@ -116,9 +141,14 @@ async function fetchOsrmSegment(lat1, lon1, lat2, lon2, signal) {
     if (!res.ok) return null
     const data = await res.json()
     if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
-      const latLngs = data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon])
-      osrmGeometryCache.set(cacheKey, latLngs)
-      return latLngs
+      const coords = data.routes[0].geometry.coordinates
+      const lastLat = coords[coords.length - 1][1]
+      const lastLon = coords[coords.length - 1][0]
+      if (calculateDistanceKm(lastLat, lastLon, lat2, lon2) < 50) {
+        const latLngs = coords.map(([lon, lat]) => [lat, lon])
+        osrmGeometryCache.set(cacheKey, latLngs)
+        return latLngs
+      }
     }
   } catch (_err) {
     return null
@@ -227,42 +257,29 @@ async function buildAsynchronousRoutePolyline(nodesWithCoords, routeSegments, si
 function fitMapToRoute(map, coords, animate = true) {
   if (!map || !coords || coords.length === 0) return
 
-  if (coords.length === 1) {
-    map.flyTo([coords[0].lat, coords[0].lon], 11, { animate, duration: 0.6 })
+  const normalized = coords
+    .map((c) => {
+      if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') {
+        return [c[0], c[1]]
+      }
+      if (c && typeof c.lat === 'number' && typeof c.lon === 'number') {
+        return [c.lat, c.lon]
+      }
+      return null
+    })
+    .filter(Boolean)
+
+  if (normalized.length === 0) return
+
+  if (normalized.length === 1) {
+    map.flyTo(normalized[0], 11, { animate, duration: 0.6 })
     return
   }
 
-  const lats = coords.map((c) => c.lat)
-  const lons = coords.map((c) => c.lon)
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const minLon = Math.min(...lons)
-  const maxLon = Math.max(...lons)
-
-  const latSpan = maxLat - minLat
-  const lonSpan = maxLon - minLon
-  const maxSpan = Math.max(latSpan, lonSpan)
-
-  const bounds = L.latLngBounds(coords.map((c) => [c.lat, c.lon]))
-
-  let targetMaxZoom = 4
-  if (maxSpan < 0.3) {
-    targetMaxZoom = 13
-  } else if (maxSpan < 0.8) {
-    targetMaxZoom = 11
-  } else if (maxSpan < 1.8) {
-    targetMaxZoom = 9
-  } else if (maxSpan < 5.0) {
-    targetMaxZoom = 8
-  } else if (maxSpan < 15.0) {
-    targetMaxZoom = 6
-  } else {
-    targetMaxZoom = 4
-  }
-
+  const bounds = L.latLngBounds(normalized)
   map.fitBounds(bounds, {
-    padding: [50, 50],
-    maxZoom: targetMaxZoom,
+    padding: [45, 45],
+    maxZoom: 14,
     animate,
     duration: 0.7,
   })
@@ -282,28 +299,32 @@ function DemoMap({
   const layersGroupRef = useRef(null)
   const lastFitKeyRef = useRef('')
   const [currentZoom, setCurrentZoom] = useState(4)
-  const [mapStyle, setMapStyle] = useState('voyager')
+  const [mapStyle, setMapStyle] = useState('osm')
   const [isRoadLoading, setIsRoadLoading] = useState(false)
   const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
   const [resolvedNodeMap, setResolvedNodeMap] = useState({})
 
   // 1. Raw Node Names for paths
   const rawRecommendedNames = useMemo(() => {
-    return route?.recommended_route || (alternativeRoute ? ['Shanghai', 'Oakland', 'Los_Angeles', 'Long_Beach'] : null)
-  }, [route?.recommended_route, alternativeRoute])
+    if (route?.recommended_route && Array.isArray(route.recommended_route) && route.recommended_route.length >= 2) {
+      return route.recommended_route
+    }
+    return null
+  }, [route?.recommended_route])
 
   const rawCurrentNames = useMemo(() => {
-    return (
-      route?.current_route ||
-      [
-        shipment?.origin?.split(',')[0] || 'Shanghai',
-        shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('in transit')
-          ? shipment.currentLocation.split(',')[0]
-          : null,
-        shipment?.destination?.split(',')[0] || 'Long_Beach',
-      ].filter(Boolean)
-    )
-  }, [route?.current_route, shipment])
+    if (route?.current_route && Array.isArray(route.current_route) && route.current_route.length >= 2) {
+      return route.current_route
+    }
+    const origin = shipment?.origin || 'Shanghai'
+    const dest = shipment?.destination || 'Long_Beach'
+    const curr = shipment?.currentLocation &&
+      !shipment.currentLocation.toLowerCase().includes('in transit') &&
+      !shipment.currentLocation.toLowerCase().includes('delivered')
+        ? shipment.currentLocation
+        : null
+    return [origin, curr, dest].filter(Boolean)
+  }, [route?.current_route, shipment?.origin, shipment?.destination, shipment?.currentLocation])
 
   // 2. Geocode any node names that are not yet resolved
   useEffect(() => {
@@ -405,18 +426,37 @@ function DemoMap({
     )
   }, [rawRecommendedNames, rawCurrentNames])
 
-  // Polyline Geometry Points State (Dual-phase: synchronous baseline + async OSRM upgrade)
-  const [geometryPoints, setGeometryPoints] = useState(() => ({
-    current: buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments),
-    recommended: recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null,
-  }))
+  // Polyline Geometry Points State (Dual-phase: backend route_geometry + async OSRM upgrade)
+  const [geometryPoints, setGeometryPoints] = useState(() => {
+    const backendGeo = route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    return {
+      current: buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments),
+      recommended: backendGeo || (recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null),
+    }
+  })
 
-  // Asynchronous OSRM Road Geometry Fetching Effect
+  // Asynchronous OSRM Road Geometry Fetching / Syncing Effect
   useEffect(() => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 3500)
 
     let isMounted = true
+
+    // If backend provided high-precision road route_geometry (length >= 2)
+    if (route?.route_geometry && route.route_geometry.length >= 2) {
+      setHasRealRoadGeometry(true)
+      setIsRoadLoading(false)
+      const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments)
+      setGeometryPoints({
+        current: isIdenticalRoute ? route.route_geometry : syncCurrent,
+        recommended: route.route_geometry,
+      })
+      return () => {
+        clearTimeout(timeoutId)
+        controller.abort()
+      }
+    }
+
     setIsRoadLoading(true)
 
     // Phase 1: Set synchronous baseline immediately
@@ -424,7 +464,7 @@ function DemoMap({
     const syncRec = recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null
     setGeometryPoints({ current: syncCurrent, recommended: syncRec })
 
-    // Phase 2: Fetch high-precision OSRM road geometry
+    // Phase 2: Fetch high-precision OSRM road geometry if backend didn't supply it
     async function resolveHighPrecisionGeometry() {
       try {
         const [currentRes, recRes] = await Promise.all([
@@ -459,9 +499,9 @@ function DemoMap({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [currentNodesWithCoords, recNodesWithCoords, route?.segments])
+  }, [currentNodesWithCoords, recNodesWithCoords, route?.segments, route?.route_geometry, isIdenticalRoute])
 
-  // Initialize Leaflet Map Instance Once
+  // Initialize Leaflet Map Instance with Key-Free OpenStreetMap Tiles
   useEffect(() => {
     if (!mapContainerRef.current) return
     if (mapInstanceRef.current) return
@@ -479,7 +519,7 @@ function DemoMap({
         minZoom: 2,
         maxZoom: 18,
         zoomControl: false,
-        scrollWheelZoom: false, // Normal mouse scrolling scrolls webpage!
+        scrollWheelZoom: false,
         doubleClickZoom: true,
         touchZoom: true,
         boxZoom: true,
@@ -491,15 +531,13 @@ function DemoMap({
       return
     }
 
-    const tileLayer = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 19,
-      }
-    )
+    // Initialize default Tile Layer (Voyager / OSM)
+    const provider = TILE_PROVIDERS[mapStyle] || TILE_PROVIDERS.voyager || TILE_PROVIDERS.osm
+    const tileLayer = L.tileLayer(provider.url, {
+      attribution: provider.attribution,
+      subdomains: provider.subdomains || 'abc',
+      maxZoom: 19,
+    })
     tileLayer.addTo(map)
 
     const layersGroup = L.layerGroup().addTo(map)
@@ -510,6 +548,11 @@ function DemoMap({
       setCurrentZoom(map.getZoom())
     })
 
+    // Invalidate size immediately and after layout settles
+    map.invalidateSize()
+    const t1 = setTimeout(() => map && map.invalidateSize(), 100)
+    const t2 = setTimeout(() => map && map.invalidateSize(), 400)
+
     const resizeObserver = new ResizeObserver(() => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.invalidateSize()
@@ -518,6 +561,8 @@ function DemoMap({
     resizeObserver.observe(mapContainerRef.current)
 
     return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
       resizeObserver.disconnect()
       if (mapInstanceRef.current) {
         try {
@@ -537,28 +582,20 @@ function DemoMap({
     if (!map) return
     setMapStyle(style)
 
+    const provider = TILE_PROVIDERS[style] || TILE_PROVIDERS.osm
+
     map.eachLayer((layer) => {
       if (layer instanceof L.TileLayer) {
         map.removeLayer(layer)
       }
     })
 
-    let url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-    let attr =
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>'
-
-    if (style === 'dark') {
-      url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    } else if (style === 'osm') {
-      url = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-      attr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
-    }
-
-    L.tileLayer(url, {
-      attribution: attr,
-      subdomains: 'abcd',
+    const newTileLayer = L.tileLayer(provider.url, {
+      attribution: provider.attribution,
+      subdomains: provider.subdomains || 'abc',
       maxZoom: 19,
-    }).addTo(map)
+    })
+    newTileLayer.addTo(map)
   }, [])
 
   // User explicitly clicks Fit Route
@@ -567,18 +604,24 @@ function DemoMap({
     if (!map) return
 
     const coordsToFit = []
-    if (origCoord && origCoord.lat) coordsToFit.push(origCoord)
-    if (destCoord && destCoord.lat) coordsToFit.push(destCoord)
-    if (currentNodesWithCoords) {
-      currentNodesWithCoords.forEach((n) => {
-        if (n.coord && n.coord.lat) coordsToFit.push(n.coord)
-      })
+    if (geometryPoints?.recommended && geometryPoints.recommended.length >= 2) {
+      coordsToFit.push(...geometryPoints.recommended)
+    } else if (geometryPoints?.current && geometryPoints.current.length >= 2) {
+      coordsToFit.push(...geometryPoints.current)
+    } else {
+      if (origCoord && origCoord.lat) coordsToFit.push(origCoord)
+      if (destCoord && destCoord.lat) coordsToFit.push(destCoord)
+      if (currentNodesWithCoords) {
+        currentNodesWithCoords.forEach((n) => {
+          if (n.coord && n.coord.lat) coordsToFit.push(n.coord)
+        })
+      }
     }
 
     if (coordsToFit.length > 0) {
       fitMapToRoute(map, coordsToFit, true)
     }
-  }, [origCoord, destCoord, currentNodesWithCoords])
+  }, [geometryPoints, origCoord, destCoord, currentNodesWithCoords])
 
   // Update Map Layers (Polylines, Markers, Radar Pulse)
   useEffect(() => {
@@ -795,10 +838,17 @@ function DemoMap({
     }
 
     // 4. Smart Camera Zoom
-    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}`
-    if (validCoords.length > 0 && lastFitKeyRef.current !== currentKey) {
+    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}_${(recPolylinePoints || []).length}`
+    if (lastFitKeyRef.current !== currentKey) {
       lastFitKeyRef.current = currentKey
-      fitMapToRoute(map, validCoords, true)
+      const pointsToFit = (recPolylinePoints && recPolylinePoints.length >= 2)
+        ? recPolylinePoints
+        : (currentPolylinePoints && currentPolylinePoints.length >= 2)
+        ? currentPolylinePoints
+        : validCoords
+      if (pointsToFit && pointsToFit.length > 0) {
+        fitMapToRoute(map, pointsToFit, true)
+      }
     }
   }, [
     geometryPoints,

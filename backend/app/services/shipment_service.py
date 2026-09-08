@@ -10,6 +10,9 @@ class ShipmentService:
     def get_shipment(self, shipment_id: str) -> dict | None:
         return shipment_repository.get(shipment_id)
 
+    def get_shipment_by_id(self, shipment_id: str) -> dict | None:
+        return shipment_repository.get(shipment_id)
+
     def create_shipment(self, shipment: ShipmentCreate) -> dict | None:
         if shipment_repository.get(shipment.shipment_id):
             return None

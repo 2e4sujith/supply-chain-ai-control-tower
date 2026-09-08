@@ -131,21 +131,29 @@ function MainLayout() {
   return (
     <div className={`app-shell ${userProfile.compact_density ? 'compact-mode' : ''}`}>
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark"><Command size={17} /></span>
-          <span>SupplyChain <strong>AI</strong></span>
+        <div className="brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }} title="SupplyChain AI Control Tower">
+          <div className="brand-mark">
+            <Command size={18} />
+          </div>
+          <div className="brand-text">
+            <span className="brand-title">SupplyChain <strong>AI</strong></span>
+            <span className="brand-subtitle">CONTROL TOWER</span>
+          </div>
         </div>
-        <div className="sidebar-label">Workspace</div>
+        <div className="sidebar-label">COMMAND CENTER</div>
         <nav aria-label="Primary navigation">
           {navigation.map(({ label, path, icon: Icon }) => (
             <NavLink className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`} end to={path} key={path} title={label}>
               <Icon size={17} /> <span>{label}</span>
+              {label === 'Alerts' && unreadAlerts.length > 0 && (
+                <span className="nav-badge">{unreadAlerts.length}</span>
+              )}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="profile">
-            <CircleUserRound size={30} />
+          <div className="profile" onClick={() => navigate('/settings')} style={{ cursor: 'pointer' }} title="Profile Settings">
+            <CircleUserRound size={32} className="profile-avatar" />
             <span>
               <strong>{userProfile.display_name}</strong>
               <small>{userProfile.workspace}</small>
@@ -157,7 +165,7 @@ function MainLayout() {
       <main className="main-content">
         <header className="topbar">
           <div className="page-heading">
-            <span className="eyebrow">Operations / Overview</span>
+            <span className="eyebrow">Enterprise Supply Chain / Operations</span>
             <h2>{currentPage}</h2>
           </div>
 
@@ -173,9 +181,9 @@ function MainLayout() {
               />
             </form>
 
-            <span className={`live-connection-badge ${liveConnected ? 'connected' : 'disconnected'}`} title="Real-time WebSocket connection status">
+            <span className={`live-connection-badge ${liveConnected ? 'connected' : 'disconnected'}`} title={liveConnected ? 'Real-time WebSocket telemetry streaming' : 'WebSocket offline - fallback polling active'}>
               <span className="live-dot" />
-              {liveConnected ? 'LIVE STREAM' : 'OFFLINE'}
+              {liveConnected ? 'LIVE STREAM' : 'OFFLINE MODE'}
             </span>
 
             {/* Notifications Bell & Dropdown */}

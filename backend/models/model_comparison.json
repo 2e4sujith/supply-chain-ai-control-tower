@@ -1,0 +1,104 @@
+{
+  "dataset": "DataCo Global Supply Chain Network Splits",
+  "benchmark_timestamp": "2026-09-08T14:35:18Z",
+  "test_sample_size": 750,
+  "leakage_audit_status": "PASS (Zero Target Leakage Verified)",
+  "models": {
+    "GCN_Graph_Neural_Network": {
+      "architecture": "2-Layer Graph Convolutional Network (Spectral Laplacian)",
+      "modality": "Multi-Modal Graph Network (Logistics Hubs + Transit Lanes + Category Flows)",
+      "metrics": {
+        "accuracy": 0.8653,
+        "precision": 1.0,
+        "recall": 0.8543,
+        "f1_score": 0.9214,
+        "balanced_accuracy": 0.9271,
+        "roc_auc": 0.9689,
+        "pr_auc": 0.9975,
+        "confusion_matrix": {
+          "tn": 57,
+          "fp": 0,
+          "fn": 101,
+          "tp": 592
+        },
+        "mean_latency_ms": 0.21,
+        "class_distribution": {
+          "total_samples": 750,
+          "positive_count": 693,
+          "negative_count": 57,
+          "positive_pct": 92.4,
+          "negative_pct": 7.6
+        }
+      },
+      "strengths": [
+        "Captures multi-hop regional cascading network disruptions",
+        "Topological graph structure robustness across novel corridors",
+        "Sub-millisecond graph embedding inference"
+      ]
+    },
+    "XGBoost_Disruption_Model": {
+      "architecture": "Gradient Boosted Decision Trees (Exact TreeSHAP)",
+      "modality": "Tabular Shipment Feature Attribution (55-Feature Preprocessor)",
+      "metrics": {
+        "accuracy": 0.5027,
+        "precision": 0.8941,
+        "recall": 0.5238,
+        "f1_score": 0.6606,
+        "balanced_accuracy": 0.3847,
+        "roc_auc": 0.4209,
+        "pr_auc": 0.9261,
+        "confusion_matrix": {
+          "tn": 14,
+          "fp": 43,
+          "fn": 330,
+          "tp": 363
+        },
+        "mean_latency_ms": 0.25,
+        "class_distribution": {
+          "total_samples": 750,
+          "positive_count": 693,
+          "negative_count": 57,
+          "positive_pct": 92.4,
+          "negative_pct": 7.6
+        }
+      },
+      "strengths": [
+        "High precision on individual transaction attributes",
+        "Exact localized TreeSHAP feature attributions",
+        "Strong handling of non-linear pricing and SLA threshold features"
+      ]
+    },
+    "Ensemble_Control_Tower": {
+      "architecture": "Soft-Voting Meta Ensemble (0.55 GCN + 0.45 XGBoost)",
+      "modality": "Fused Graph-Tabular Cognitive Risk Architecture",
+      "metrics": {
+        "accuracy": 0.9053,
+        "precision": 0.9968,
+        "recall": 0.9004,
+        "f1_score": 0.9462,
+        "balanced_accuracy": 0.9327,
+        "roc_auc": 0.9618,
+        "pr_auc": 0.9969,
+        "confusion_matrix": {
+          "tn": 55,
+          "fp": 2,
+          "fn": 69,
+          "tp": 624
+        },
+        "mean_latency_ms": 0.47,
+        "class_distribution": {
+          "total_samples": 750,
+          "positive_count": 693,
+          "negative_count": 57,
+          "positive_pct": 92.4,
+          "negative_pct": 7.6
+        }
+      },
+      "strengths": [
+        "Combines structural multi-hop graph topology with localized tabular TreeSHAP feature attributions",
+        "Balanced accuracy and high sensitivity across class-imbalanced global lanes",
+        "Strictly evaluated on identical test predictions"
+      ]
+    }
+  }
+}

@@ -250,7 +250,7 @@ class GenericRestWeatherProvider(BaseDisruptionProvider):
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
         provider_name: Optional[str] = None,
-        timeout_seconds: float = 5.0,
+        timeout_seconds: float = 1.2,
     ):
         provider_id = provider_name or os.getenv("WEATHER_PROVIDER", "openmeteo").lower()
         super().__init__(name=f"RealWeatherProvider ({provider_id})", provider_type="WEATHER")
@@ -695,7 +695,7 @@ class GenericRestPortProvider(BaseDisruptionProvider):
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
         provider_name: Optional[str] = None,
-        timeout_seconds: float = 5.0,
+        timeout_seconds: float = 1.2,
     ):
         provider_id = provider_name or os.getenv("PORT_PROVIDER", "portwatch").lower()
         super().__init__(name=f"RealPortProvider ({provider_id})", provider_type="PORT_CONGESTION")
@@ -1021,7 +1021,7 @@ class GenericRestTrafficProvider(BaseDisruptionProvider):
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
         provider_name: Optional[str] = None,
-        timeout_seconds: float = 5.0,
+        timeout_seconds: float = 1.2,
     ):
         provider_id = provider_name or os.getenv("TRAFFIC_PROVIDER", "openfreight").lower()
         super().__init__(name=f"RealTrafficProvider ({provider_id})", provider_type="TRAFFIC")

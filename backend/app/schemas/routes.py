@@ -36,6 +36,7 @@ class AlternativeRouteResponse(BaseModel):
     segments: Optional[list[dict[str, Any]]] = None
     reason: str
     algorithm: str = "NETWORKX_DIJKSTRA"
+    route_geometry: list[list[float]] = Field(default_factory=list)
 
     # Phase 7: Real-Time Risk & Disruption Routing Decision Metadata
     ml_risk_score: Optional[int] = None
@@ -79,6 +80,7 @@ class RouteOptimizationResponse(BaseModel):
     reason: Optional[str] = None
     segments: list[RouteSegmentDetail]
     algorithm: str = "NETWORKX_DIJKSTRA"
+    route_geometry: list[list[float]] = Field(default_factory=list)
 
     # Phase 7: Real-Time Risk Decision Metadata
     ml_risk_score: Optional[int] = None
@@ -93,6 +95,45 @@ class RouteOptimizationResponse(BaseModel):
     decision_reason: Optional[str] = None
     data_sources: list[str] = []
     is_mock_fallback_used: bool = False
+
+
+class WhatIfSimulationRequest(BaseModel):
+    shipment_id: Optional[str] = Field(default=None, pattern=r"^SHP-[A-Z0-9-]+$")
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    simulated_mode: Optional[Literal["Road", "Rail", "Air", "Ocean"]] = None
+    weather_severity: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    port_congestion: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    customs_risk: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    priority_level: Optional[Literal["Standard", "High", "Urgent"]] = None
+    sla_days_delta: Optional[float] = Field(default=0.0, ge=-5.0, le=10.0)
+    avoid_nodes: Optional[list[str]] = Field(default_factory=list)
+
+
+class RouteScenarioSummary(BaseModel):
+    path: list[str]
+    total_distance_km: float
+    estimated_time_hours: float
+    transport_modes: list[str]
+    fused_risk_score: int
+    fused_risk_tier: str
+    gnn_risk_score: int
+    xgboost_risk_score: int
+    effective_cost: float
+    route_geometry: list[list[float]] = Field(default_factory=list)
+
+
+class WhatIfSimulationResponse(BaseModel):
+    shipment_id: Optional[str] = None
+    origin: str
+    destination: str
+    baseline: RouteScenarioSummary
+    simulated: RouteScenarioSummary
+    delta: dict[str, Any]
+    feasibility_status: str
+    recommendation: str
+    parameter_adjustments: dict[str, Any]
+
 
 
 

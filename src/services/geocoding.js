@@ -227,6 +227,18 @@ export const PREDEFINED_HUBS = {
     type: 'Academic & Tech Landmark',
     fullAddress: 'Velagapudi Ramakrishna Siddhartha Engineering College, Kanuru, Vijayawada, Andhra Pradesh, 520007, India',
   },
+  Nuzuvidu: {
+    lat: 16.7850,
+    lon: 80.8488,
+    label: 'Nuzvid Freight Center',
+    city: 'Nuzvid',
+    state: 'Andhra Pradesh',
+    country: 'India',
+    postcode: '521201',
+    road: 'SH 42 / Nuzvid Bypass',
+    type: 'Regional Logistics Center',
+    fullAddress: 'Nuzvid Freight Center, SH 42, Krishna District, Andhra Pradesh, 521201, India',
+  },
 
   // Global Hubs
   Shanghai: {
@@ -760,6 +772,15 @@ export const LOCATION_ALIASES = {
   'guntur, india': 'Guntur',
   'guntur, ap': 'Guntur',
   'guntur, andhra pradesh': 'Guntur',
+  'guntur,vijayawada': 'Guntur',
+  'guntur, vijayawada': 'Guntur',
+  'guntur,india': 'Guntur',
+  nuzuvidu: 'Nuzuvidu',
+  nuzvid: 'Nuzuvidu',
+  'nuzuvidu, india': 'Nuzuvidu',
+  'nuzvid, india': 'Nuzuvidu',
+  'nuzuvidu, ap': 'Nuzuvidu',
+  'nuzvid, ap': 'Nuzuvidu',
   rajahmundry: 'Rajahmundry',
   'rajahmundry, india': 'Rajahmundry',
   eluru: 'Eluru',
@@ -989,8 +1010,11 @@ export function normalizeLocationQuery(query) {
 export function resolvePredefinedHub(rawQuery) {
   if (!rawQuery || typeof rawQuery !== 'string') return null
   const clean = rawQuery.trim()
+  if (!clean) return null
+
   const lowerClean = clean.toLowerCase()
-  const lowerFirst = clean.split(',')[0].trim().toLowerCase()
+  const firstToken = clean.split(/[,/]/)[0].trim()
+  const lowerFirst = firstToken.toLowerCase()
   const lowerKey = lowerClean.replace(/[\s_.,-]+/g, '')
   const lowerFirstKey = lowerFirst.replace(/[\s_.,-]+/g, '')
 
@@ -1009,29 +1033,53 @@ export function resolvePredefinedHub(rawQuery) {
   }
 
   // 2. Direct key match in PREDEFINED_HUBS
+  const firstUnderscored = firstToken.replace(/\s+/g, '_')
   const underscored = clean.replace(/\s+/g, '_')
+  if (PREDEFINED_HUBS[firstUnderscored]) return PREDEFINED_HUBS[firstUnderscored]
+  if (PREDEFINED_HUBS[firstToken]) return PREDEFINED_HUBS[firstToken]
   if (PREDEFINED_HUBS[underscored]) return PREDEFINED_HUBS[underscored]
   if (PREDEFINED_HUBS[clean]) return PREDEFINED_HUBS[clean]
 
-  // 3. Normalized stripped key match in PREDEFINED_HUBS
+  // 3. Normalized stripped key match in PREDEFINED_HUBS (first token prioritized)
   for (const [k, v] of Object.entries(PREDEFINED_HUBS)) {
     const kLower = k.toLowerCase()
     const kStripped = kLower.replace(/[\s_.,-]+/g, '')
-    if (kLower === lowerClean || kLower === lowerFirst || kStripped === lowerKey || kStripped === lowerFirstKey) {
+    if (kLower === lowerFirst || kStripped === lowerFirstKey) {
+      return v
+    }
+  }
+  for (const [k, v] of Object.entries(PREDEFINED_HUBS)) {
+    const kLower = k.toLowerCase()
+    const kStripped = kLower.replace(/[\s_.,-]+/g, '')
+    if (kLower === lowerClean || kStripped === lowerKey) {
       return v
     }
   }
 
-  // 4. Substring / city / label matching
+  // 4. City / Label match (first token prioritized)
+  for (const [, v] of Object.entries(PREDEFINED_HUBS)) {
+    const cityLower = (v.city || '').toLowerCase()
+    const labelLower = (v.label || '').toLowerCase()
+    if (cityLower && (cityLower === lowerFirst || lowerFirst.includes(cityLower))) {
+      return v
+    }
+    if (labelLower && (labelLower === lowerFirst || lowerFirst.includes(labelLower))) {
+      return v
+    }
+  }
+
+  // 5. Fallback substring match strictly on first token, then full query
   for (const [k, v] of Object.entries(PREDEFINED_HUBS)) {
     const kLower = k.toLowerCase()
     const cityLower = (v.city || '').toLowerCase()
-    const labelLower = (v.label || '').toLowerCase()
-    if (
-      lowerClean.includes(kLower) ||
-      (cityLower && lowerClean.includes(cityLower)) ||
-      (labelLower && lowerClean.includes(labelLower))
-    ) {
+    if (lowerFirst.includes(kLower) || (cityLower && lowerFirst.includes(cityLower))) {
+      return v
+    }
+  }
+  for (const [k, v] of Object.entries(PREDEFINED_HUBS)) {
+    const kLower = k.toLowerCase()
+    const cityLower = (v.city || '').toLowerCase()
+    if (lowerClean.includes(kLower) || (cityLower && lowerClean.includes(cityLower))) {
       return v
     }
   }

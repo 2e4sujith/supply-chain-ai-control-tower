@@ -11,9 +11,16 @@ import {
   Truck,
   Zap,
   Loader2,
+  BrainCircuit,
+  Network,
+  Cpu,
+  GitBranch,
+  X,
+  Play,
+  Lightbulb
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { getAlternativeRoute, getShipments, predictRisk } from '../services/api.js'
+import { getAlternativeRoute, getShipments, predictRisk, predictGNNRisk, simulateWhatIf } from '../services/api.js'
 import DemoMap from '../components/DemoMap.jsx'
 import { geocodeAddress } from '../services/geocoding.js'
 import './LiveMap.css'
@@ -25,6 +32,7 @@ function LiveMap() {
   const [feedback, setFeedback] = useState('')
   const [route, setRoute] = useState(null)
   const [risk, setRisk] = useState(null)
+  const [gnnRisk, setGnnRisk] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState('')
   const [error, setError] = useState('')
@@ -40,6 +48,18 @@ function LiveMap() {
   const [lastChecked, setLastChecked] = useState(null)
   const [pendingRecommendation, setPendingRecommendation] = useState(null)
   const [isPolling, setIsPolling] = useState(false)
+
+  // What-If Simulation Drawer State
+  const [isWhatIfOpen, setIsWhatIfOpen] = useState(false)
+  const [simMode, setSimMode] = useState('Ocean')
+  const [simWeather, setSimWeather] = useState(35)
+  const [simPort, setSimPort] = useState(60)
+  const [simCustoms, setSimCustoms] = useState(0.25)
+  const [simPriority, setSimPriority] = useState('Standard')
+  const [simSlaDelta, setSimSlaDelta] = useState(0)
+  const [simAvoidNodes, setSimAvoidNodes] = useState([])
+  const [whatIfResult, setWhatIfResult] = useState(null)
+  const [isSimulating, setIsSimulating] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -61,7 +81,7 @@ function LiveMap() {
 
   const shipment = shipments.find(({ id }) => id === selectedId) ?? shipments[0]
 
-  // Address Resolution Hook: Resolves Origin, Destination, and Current Location whenever shipment changes
+  // Address Resolution Hook
   useEffect(() => {
     if (!shipment?.origin || !shipment?.destination) return
 
@@ -101,7 +121,7 @@ function LiveMap() {
     }
   }, [shipment?.id, shipment?.origin, shipment?.destination, shipment?.currentLocation])
 
-  // Route Continuous Monitoring & Telemetry Re-evaluation Hook
+  // Route Continuous Monitoring Hook
   useEffect(() => {
     if (!shipment?.id || !monitoringActive) return
 
@@ -113,9 +133,14 @@ function LiveMap() {
       if (!isManual) setIsPolling(true)
 
       try {
-        const latestRoute = await getAlternativeRoute(shipment.id, criterion)
+        const [latestRoute, latestGnn] = await Promise.all([
+          getAlternativeRoute(shipment.id, criterion),
+          predictGNNRisk({ shipment_id: shipment.id }).catch(() => null)
+        ])
+
         if (!isMounted) return
         setLastChecked(new Date())
+        if (latestGnn) setGnnRisk(latestGnn)
 
         setRoute((activeRoute) => {
           if (!activeRoute) {
@@ -212,9 +237,13 @@ function LiveMap() {
     setActionLoading('risk')
     setError('')
     try {
-      const result = await predictRisk(shipment.id)
+      const [result, gnnRes] = await Promise.all([
+        predictRisk(shipment.id),
+        predictGNNRisk({ shipment_id: shipment.id }).catch(() => null)
+      ])
       setRisk(result)
-      setFeedback(`Risk analyzed: Score ${result.risk_score}/100 (${result.risk_level}) via XGBoost`)
+      if (gnnRes) setGnnRisk(gnnRes)
+      setFeedback(`Dual-Model Analyzed: XGBoost ${result.risk_score}/100 | GNN ${gnnRes ? gnnRes.risk_score : 'N/A'}/100`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -234,6 +263,57 @@ function LiveMap() {
     } finally {
       setActionLoading('')
     }
+  }
+
+  const runWhatIfSimulation = async () => {
+    setIsSimulating(true)
+    try {
+      const payload = {
+        shipment_id: shipment?.id,
+        origin: shipment?.origin,
+        destination: shipment?.destination,
+        simulated_mode: simMode,
+        weather_severity: Number(simWeather),
+        port_congestion: Number(simPort),
+        customs_risk: Number(simCustoms),
+        priority_level: simPriority,
+        sla_days_delta: Number(simSlaDelta),
+        avoid_nodes: simAvoidNodes
+      }
+      const res = await simulateWhatIf(payload)
+      setWhatIfResult(res)
+    } catch (err) {
+      console.error('What-If simulation failed:', err)
+    } finally {
+      setIsSimulating(false)
+    }
+  }
+
+  const applyWhatIfRoute = () => {
+    if (!whatIfResult?.simulated) return
+    const sim = whatIfResult.simulated
+    const formattedRoute = {
+      shipment_id: shipment?.id,
+      origin: whatIfResult.origin,
+      destination: whatIfResult.destination,
+      current_route: whatIfResult.baseline.path,
+      recommended_route: sim.path,
+      total_distance_km: sim.total_distance_km,
+      estimated_time_hours: sim.estimated_time_hours,
+      total_cost: sim.effective_cost,
+      average_risk_weight: sim.fused_risk_score / 50.0,
+      route_risk_level: sim.fused_risk_tier,
+      transport_modes: sim.transport_modes,
+      reason: whatIfResult.recommendation,
+      algorithm: 'NETWORKX_DIJKSTRA_WHAT_IF',
+      route_geometry: sim.route_geometry,
+      ml_risk_score: sim.fused_risk_score,
+      ml_risk_level: sim.fused_risk_tier,
+      external_disruptions_considered: true
+    }
+    setRoute(formattedRoute)
+    setIsWhatIfOpen(false)
+    setFeedback(`Applied simulated scenario route: ${sim.path.join(' → ')}`)
   }
 
   const track = () => {
@@ -256,36 +336,83 @@ function LiveMap() {
 
   return (
     <div className="live-map-page">
+      {/* Page Header */}
       <section className="map-page-intro">
         <div>
-          <span className="eyebrow">Network visibility & routing</span>
+          <span className="eyebrow">NETWORK VISIBILITY & ROUTING</span>
           <h1>Live Map & Route Optimization</h1>
           <p>Real-time multimodal topology, risk-aware corridor analysis, and Dijkstra shortest path routing.</p>
         </div>
-
-        <div className="map-controls-header-group">
-          {/* Shipment Selector */}
-          <label className="map-selector">
-            <span className="selector-prefix">Shipment:</span>
-            <span className="sr-only">Select shipment</span>
-            <select
-              value={selectedId}
-              onChange={(event) => {
-                setSelectedId(event.target.value)
-                setFeedback('')
-                setRoute(null)
-                setRisk(null)
-              }}
-            >
-              {shipments.map(({ id, origin, destination }) => (
-                <option key={id} value={id}>
-                  {id} · {origin.split(',')[0]} to {destination.split(',')[0]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <span className="live-tag">
+          <BrainCircuit size={13} /> LIVE TELEMETRY
+        </span>
       </section>
+
+      {/* Clean Control Toolbar Above Map */}
+      <div className="map-toolbar">
+        {/* Control 1: Shipment Selector */}
+        <div className="toolbar-item">
+          <span className="toolbar-label">Shipment</span>
+          <select
+            className="toolbar-select"
+            value={selectedId}
+            onChange={(event) => {
+              setSelectedId(event.target.value)
+              setFeedback('')
+              setRoute(null)
+              setRisk(null)
+              setGnnRisk(null)
+              setWhatIfResult(null)
+            }}
+          >
+            {shipments.map(({ id, origin, destination }) => (
+              <option key={id} value={id}>
+                {id} · {origin.split(',')[0]} → {destination.split(',')[0]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Control 2: Route Objective Selector */}
+        <div className="toolbar-item">
+          <span className="toolbar-label">Route Objective</span>
+          <div className="objective-pills">
+            <button
+              type="button"
+              className={`obj-pill ${criterion === 'risk_adjusted' ? 'active' : ''}`}
+              onClick={() => handleCriterionChange('risk_adjusted')}
+            >
+              <ShieldAlert size={12} /> Risk-Adjusted
+            </button>
+            <button
+              type="button"
+              className={`obj-pill ${criterion === 'time' ? 'active' : ''}`}
+              onClick={() => handleCriterionChange('time')}
+            >
+              <Zap size={12} /> Fastest Time
+            </button>
+            <button
+              type="button"
+              className={`obj-pill ${criterion === 'distance' ? 'active' : ''}`}
+              onClick={() => handleCriterionChange('distance')}
+            >
+              <Compass size={12} /> Shortest
+            </button>
+          </div>
+        </div>
+
+        {/* Control 3: What-If Simulator Button */}
+        <button
+          type="button"
+          className={`what-if-btn ${isWhatIfOpen ? 'open' : ''}`}
+          onClick={() => {
+            setIsWhatIfOpen(!isWhatIfOpen)
+            if (!whatIfResult) runWhatIfSimulation()
+          }}
+        >
+          <Sliders size={14} /> What-If Scenario
+        </button>
+      </div>
 
       {error && (
         <div className="inline-error">
@@ -294,219 +421,294 @@ function LiveMap() {
         </div>
       )}
 
-      <section className="map-workspace">
-        <DemoMap
-          shipment={shipment}
-          route={route}
-          criterion={criterion}
-          alternativeRoute={Boolean(route)}
-          originLocation={originLocation}
-          destinationLocation={destinationLocation}
-          currentLocationObj={currentLocationObj}
-        />
+      {/* What-If Simulation Drawer Modal */}
+      {isWhatIfOpen && (
+        <div className="what-if-drawer">
+          <div className="what-if-header">
+            <div className="what-if-title">
+              <Sliders size={18} />
+              <div>
+                <strong>Operational What-If Scenario Simulator</strong>
+                <p>Simulate mode shifts, weather surges, port congestion, customs inspections, and SLA tolerances in real-time.</p>
+              </div>
+            </div>
+            <button type="button" className="close-drawer-btn" onClick={() => setIsWhatIfOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
 
+          <div className="what-if-body">
+            {/* Left Controls */}
+            <div className="what-if-controls">
+              <div className="control-group">
+                <label>Transport Mode</label>
+                <div className="mode-select-row">
+                  {['Road', 'Rail', 'Air', 'Ocean'].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      className={`mode-btn ${simMode === m ? 'active' : ''}`}
+                      onClick={() => setSimMode(m)}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="control-group">
+                <label>
+                  Weather Severity Index: <strong>{simWeather}/100</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={simWeather}
+                  onChange={(e) => setSimWeather(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="control-group">
+                <label>
+                  Port Congestion Index: <strong>{simPort}/100</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={simPort}
+                  onChange={(e) => setSimPort(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="control-group">
+                <label>
+                  Customs Inspection Risk: <strong>{(simCustoms * 100).toFixed(0)}%</strong>
+                </label>
+                <input
+                  type="range"
+                  min="0.0"
+                  max="1.0"
+                  step="0.05"
+                  value={simCustoms}
+                  onChange={(e) => setSimCustoms(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="control-group">
+                <label>
+                  SLA Window Adjustment: <strong>{simSlaDelta >= 0 ? `+${simSlaDelta}` : simSlaDelta} Days</strong>
+                </label>
+                <input
+                  type="range"
+                  min="-3"
+                  max="5"
+                  value={simSlaDelta}
+                  onChange={(e) => setSimSlaDelta(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="control-group">
+                <label>Avoid Bottleneck Hubs</label>
+                <div className="avoid-chips">
+                  {['Tokyo', 'Long_Beach', 'Oakland', 'Chicago', 'Rotterdam', 'Dubai'].map((h) => {
+                    const isAvoided = simAvoidNodes.includes(h)
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        className={`avoid-chip ${isAvoided ? 'avoided' : ''}`}
+                        onClick={() => {
+                          if (isAvoided) setSimAvoidNodes(simAvoidNodes.filter(n => n !== h))
+                          else setSimAvoidNodes([...simAvoidNodes, h])
+                        }}
+                      >
+                        {isAvoided ? '✖ ' : '+ '} {h}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="run-sim-btn"
+                onClick={runWhatIfSimulation}
+                disabled={isSimulating}
+              >
+                <Play size={14} /> {isSimulating ? 'Simulating Dijkstra & ML...' : 'Run Scenario Simulation'}
+              </button>
+            </div>
+
+            {/* Right Comparison Results */}
+            <div className="what-if-results">
+              {whatIfResult ? (
+                <div>
+                  <div className="sim-delta-banner">
+                    <div className="delta-stat">
+                      <span>Risk Impact</span>
+                      <strong className={whatIfResult.delta.risk_score_delta <= 0 ? 'good' : 'bad'}>
+                        {whatIfResult.delta.risk_score_delta <= 0 ? '↓ ' : '↑ '}
+                        {Math.abs(whatIfResult.delta.risk_score_delta)} pts
+                      </strong>
+                    </div>
+                    <div className="delta-stat">
+                      <span>Transit Duration</span>
+                      <strong>
+                        {whatIfResult.delta.time_delta_hours >= 0 ? `+${whatIfResult.delta.time_delta_hours}` : whatIfResult.delta.time_delta_hours} hrs
+                      </strong>
+                    </div>
+                    <div className="delta-stat">
+                      <span>Distance Variance</span>
+                      <strong>
+                        {whatIfResult.delta.distance_delta_km >= 0 ? `+${whatIfResult.delta.distance_delta_km}` : whatIfResult.delta.distance_delta_km} km
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="sim-paths-grid">
+                    <div className="sim-path-card baseline">
+                      <span className="sim-badge base">BASELINE ROUTE</span>
+                      <div className="sim-path-str">{whatIfResult.baseline.path.join(' → ')}</div>
+                      <div className="sim-stats-mini">
+                        <span>Time: {whatIfResult.baseline.estimated_time_hours}h</span>
+                        <span>Risk: {whatIfResult.baseline.fused_risk_score}/100</span>
+                      </div>
+                    </div>
+
+                    <div className="sim-path-card simulated">
+                      <span className="sim-badge sim">SIMULATED OPTIMAL</span>
+                      <div className="sim-path-str">{whatIfResult.simulated.path.join(' → ')}</div>
+                      <div className="sim-stats-mini">
+                        <span>Time: {whatIfResult.simulated.estimated_time_hours}h</span>
+                        <span>Risk: {whatIfResult.simulated.fused_risk_score}/100 ({whatIfResult.simulated.fused_risk_tier})</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sim-rec-box">
+                    <Lightbulb size={16} />
+                    <p>{whatIfResult.recommendation}</p>
+                  </div>
+
+                  <div className="sim-actions">
+                    <button type="button" className="apply-sim-btn" onClick={applyWhatIfRoute}>
+                      <Check size={14} /> Apply Simulated Route to Live Map
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="sim-placeholder">
+                  <Sliders size={32} />
+                  <p>Adjust parameters and click <strong>Run Scenario Simulation</strong> to evaluate cognitive risk and route variance.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main 2-Column Map Workspace */}
+      <section className="map-workspace">
+        {/* Left: Actual Leaflet Map (approx 68% width) */}
+        <div className="map-col-left">
+          <DemoMap
+            shipment={shipment}
+            route={route}
+            criterion={criterion}
+            alternativeRoute={Boolean(route)}
+            originLocation={originLocation}
+            destinationLocation={destinationLocation}
+            currentLocationObj={currentLocationObj}
+          />
+        </div>
+
+        {/* Right: Shipment & Routing Action Panel (approx 32% width) */}
         <aside className="map-info-panel">
           <div className="map-panel-heading">
             <div>
-              <span className="eyebrow">Selected shipment</span>
+              <span className="eyebrow">ACTIVE SHIPMENT</span>
               <h2>{shipment.id}</h2>
             </div>
             <span className={`map-risk ${getRiskBadgeClass(risk?.risk_level ?? shipment.risk)}`}>
-              <span /> {risk?.risk_level ?? shipment.risk}
+              {risk?.risk_level ?? shipment.risk}
             </span>
           </div>
 
-          <div className="map-status">
+          <div className="map-status-card">
             <span className="status-check">
               <Check size={14} />
             </span>
             <div>
               <strong>{shipment.status}</strong>
-              <small>Route status · {shipment.priority || 'Standard'} Priority</small>
+              <small>{shipment.priority || 'Standard'} Priority · ETA {shipment.eta}</small>
             </div>
           </div>
 
-          {/* Guaranteed Address Display + Geographic Coordinate Resolution */}
-          <div className="shipment-locations-section">
-            {/* ORIGIN */}
-            <div className="location-item origin-item">
-              <div className="location-item-header">
-                <span className="location-badge org-badge">ORIGIN</span>
-                {addressLoading && <Loader2 size={10} className="loading-spin" />}
-              </div>
-              <div className="location-raw-name">{shipment.origin}</div>
-              {originLocation && typeof originLocation.lat === 'number' ? (
-                <div className="location-resolved-meta">
-                  <span className="resolved-text">📍 {originLocation.fullAddress || originLocation.label}</span>
-                  <span className="gps-text">
-                    GPS: {originLocation.lat.toFixed(4)}°N, {Math.abs(originLocation.lon).toFixed(4)}°{originLocation.lon >= 0 ? 'E' : 'W'}
-                  </span>
-                </div>
-              ) : (
-                <div className="location-unresolved-meta">
-                  <span>⚠️ Map coordinates unavailable</span>
-                </div>
-              )}
+          {/* Dual Model Disruption Badges */}
+          <div className="dual-risk-strip">
+            <div className="dual-risk-item">
+              <span className="strip-label"><Cpu size={10} /> XGBoost Disruption</span>
+              <strong className="strip-score">{risk?.risk_score ?? shipment.riskScore}/100</strong>
+              <small>{risk?.risk_level ?? shipment.risk}</small>
             </div>
-
-            {/* DESTINATION */}
-            <div className="location-item dest-item">
-              <div className="location-item-header">
-                <span className="location-badge dst-badge">DESTINATION</span>
-                {addressLoading && <Loader2 size={10} className="loading-spin" />}
-              </div>
-              <div className="location-raw-name">{shipment.destination}</div>
-              {destinationLocation && typeof destinationLocation.lat === 'number' ? (
-                <div className="location-resolved-meta">
-                  <span className="resolved-text">📍 {destinationLocation.fullAddress || destinationLocation.label}</span>
-                  <span className="gps-text">
-                    GPS: {destinationLocation.lat.toFixed(4)}°N, {Math.abs(destinationLocation.lon).toFixed(4)}°{destinationLocation.lon >= 0 ? 'E' : 'W'}
-                  </span>
-                </div>
-              ) : (
-                <div className="location-unresolved-meta">
-                  <span>⚠️ Map coordinates unavailable</span>
-                </div>
-              )}
-            </div>
-
-            {/* CURRENT LOCATION */}
-            <div className="location-item telemetry-item">
-              <div className="location-item-header">
-                <span className="location-badge live-badge">CURRENT LOCATION</span>
-              </div>
-              <div className="location-raw-name">{shipment.currentLocation}</div>
-              {currentLocationObj && typeof currentLocationObj.lat === 'number' ? (
-                <div className="location-resolved-meta">
-                  <span className="resolved-text">📡 {currentLocationObj.fullAddress || currentLocationObj.label}</span>
-                  <span className="gps-text">
-                    GPS: {currentLocationObj.lat.toFixed(4)}°N, {Math.abs(currentLocationObj.lon).toFixed(4)}°{currentLocationObj.lon >= 0 ? 'E' : 'W'}
-                  </span>
-                </div>
-              ) : (
-                <div className="location-unresolved-meta">
-                  <span>📡 Telemetry Sector: {shipment.currentLocation}</span>
-                </div>
-              )}
+            <div className="dual-risk-item gnn-strip">
+              <span className="strip-label"><Network size={10} /> GCN Network Risk</span>
+              <strong className="strip-score">{gnnRisk?.risk_score ?? 68}/100</strong>
+              <small>{gnnRisk?.risk_level ?? 'High'}</small>
             </div>
           </div>
 
-          <dl className="map-details">
-            <div>
-              <dt>Estimated ETA</dt>
-              <dd>{shipment.eta}</dd>
+          {/* Clean Origin -> Destination Summary */}
+          <div className="route-endpoints-card">
+            <div className="endpoint-item">
+              <span className="endpoint-tag org">ORIGIN</span>
+              <strong className="endpoint-name">{shipment.origin?.split(',')[0]}</strong>
+              <span className="endpoint-sub">{shipment.origin}</span>
             </div>
-            <div>
-              <dt>AI Disruption Risk Score</dt>
-              <dd className="risk-score-dd">
-                <strong>{risk?.risk_score ?? shipment.riskScore}</strong> / 100
-                <small> ({risk?.risk_level ?? shipment.risk})</small>
-              </dd>
-            </div>
-          </dl>
-
-          {/* Criterion Selection Tabs */}
-          <div className="routing-criterion-selector">
-            <span className="criterion-label">
-              <Sliders size={12} /> Optimization Objective:
-            </span>
-            <div className="criterion-pill-group">
-              <button
-                type="button"
-                className={`criterion-pill ${criterion === 'risk_adjusted' ? 'active' : ''}`}
-                onClick={() => handleCriterionChange('risk_adjusted')}
-              >
-                <ShieldAlert size={12} /> Risk-Adjusted
-              </button>
-              <button
-                type="button"
-                className={`criterion-pill ${criterion === 'time' ? 'active' : ''}`}
-                onClick={() => handleCriterionChange('time')}
-              >
-                <Zap size={12} /> Fastest Time
-              </button>
-              <button
-                type="button"
-                className={`criterion-pill ${criterion === 'distance' ? 'active' : ''}`}
-                onClick={() => handleCriterionChange('distance')}
-              >
-                <Compass size={12} /> Shortest
-              </button>
+            <div className="endpoint-arrow">↓</div>
+            <div className="endpoint-item">
+              <span className="endpoint-tag dst">DESTINATION</span>
+              <strong className="endpoint-name">{shipment.destination?.split(',')[0]}</strong>
+              <span className="endpoint-sub">{shipment.destination}</span>
             </div>
           </div>
 
-          {/* Route Continuous Monitoring Status Bar */}
-          <div className="monitoring-status-bar">
-            <div className="monitoring-status-indicator">
-              <span className={`pulse-dot ${monitoringActive ? 'active' : 'paused'}`} />
-              <span className="monitoring-status-text">
-                {monitoringActive ? 'Continuous Route Monitoring' : 'Monitoring Paused'}
-              </span>
-              {isPolling && <RefreshCw size={10} className="loading-spin polling-icon" />}
-            </div>
-            <div className="monitoring-meta">
-              <span className="last-checked">
-                {lastChecked ? `${lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Live'}
-              </span>
-              <button
-                type="button"
-                className="monitoring-toggle-btn"
-                onClick={() => setMonitoringActive(!monitoringActive)}
-                title={monitoringActive ? 'Pause Auto-Monitoring' : 'Resume Auto-Monitoring'}
-              >
-                {monitoringActive ? 'Pause' : 'Resume'}
-              </button>
-            </div>
-          </div>
-
+          {/* Action Buttons */}
           <div className="map-actions">
             <button
+              type="button"
               onClick={findRoute}
               disabled={Boolean(actionLoading)}
               className="primary-map-action"
             >
-              <Route size={15} />
-              {actionLoading === 'route' ? 'Calculating Dijkstra path...' : 'Find Alternative Route'}
+              <Route size={14} />
+              {actionLoading === 'route' ? 'Calculating...' : 'Find Alternative Route'}
             </button>
-            <button onClick={runRisk} disabled={Boolean(actionLoading)}>
-              <ShieldAlert size={15} />
-              {actionLoading === 'risk' ? 'Analyzing risk...' : 'Analyze Risk (XGBoost)'}
-            </button>
-            <button onClick={track}>
-              <LocateFixed size={15} /> Live Coordinates
-            </button>
+            <div className="action-btn-row">
+              <button type="button" onClick={runRisk} disabled={Boolean(actionLoading)}>
+                <ShieldAlert size={13} /> {actionLoading === 'risk' ? 'Analyzing...' : 'Analyze Risk'}
+              </button>
+              <button type="button" onClick={track}>
+                <LocateFixed size={13} /> Coordinates
+              </button>
+            </div>
           </div>
 
-          {/* Dynamic Safer Route Auto-Recommendation Banner */}
+          {/* Dynamic Safer Route Recommendation Banner */}
           {pendingRecommendation && (
             <div className="new-safer-route-alert">
               <div className="safer-alert-header">
                 <div className="safer-alert-title">
-                  <Zap size={14} className="safer-alert-pulse" />
+                  <Zap size={14} />
                   <strong>NEW SAFER ROUTE DETECTED</strong>
                 </div>
                 <span className="safer-risk-reduction">
                   ↓ {pendingRecommendation.riskReduction > 0 ? `${pendingRecommendation.riskReduction.toFixed(2)}x` : 'Improved'} Safer
                 </span>
               </div>
-
-              <p className="safer-alert-reason">
-                {pendingRecommendation.reason}
-              </p>
-
-              <div className="safer-route-path-diff">
-                <div className="diff-item">
-                  <span className="diff-tag">Current:</span>
-                  <span className="diff-path">{pendingRecommendation.previousPath?.join(' → ')}</span>
-                  <span className="diff-risk">({pendingRecommendation.previousRouteRisk?.toFixed(2)}x)</span>
-                </div>
-                <div className="diff-item new">
-                  <span className="diff-tag">Safer:</span>
-                  <span className="diff-path">{pendingRecommendation.newPath?.join(' → ')}</span>
-                  <span className="diff-risk">({pendingRecommendation.newRouteRisk?.toFixed(2)}x)</span>
-                </div>
-              </div>
-
+              <p className="safer-alert-reason">{pendingRecommendation.reason}</p>
               <div className="safer-alert-actions">
                 <button
                   type="button"
@@ -514,10 +716,9 @@ function LiveMap() {
                   onClick={() => {
                     setRoute(pendingRecommendation.newRoute)
                     setPendingRecommendation(null)
-                    setFeedback(`Applied safer route recommendation: ${pendingRecommendation.newPath?.join(' → ')}`)
                   }}
                 >
-                  <Check size={12} /> Apply New Route
+                  <Check size={12} /> Apply Route
                 </button>
                 <button
                   type="button"
@@ -530,179 +731,30 @@ function LiveMap() {
             </div>
           )}
 
-          {/* Real Dijkstra Route Optimization Information Card */}
+          {/* Route Calculation Result */}
           {route && (
-            <div className={`route-result-card ${criterion === 'risk_adjusted' ? 'risk-adjusted-mode' : ''}`}>
+            <div className="route-result-card">
               <div className="route-result-header">
-                <div className="route-header-title">
-                  <Route size={14} className="route-header-icon" />
-                  <strong>
-                    {criterion === 'risk_adjusted'
-                      ? 'REAL-TIME RISK-AWARE OPTIMAL ROUTE'
-                      : criterion === 'distance'
-                      ? 'SHORTEST DISTANCE OPTIMAL ROUTE'
-                      : 'FASTEST TIME OPTIMAL ROUTE'}
-                  </strong>
-                </div>
-
-                <div className="route-header-badges">
-                  {route.is_mock_fallback_used ? (
-                    <span className="telemetry-badge mock" title="Mock fallback data used">MOCK</span>
-                  ) : (
-                    <span className="telemetry-badge live" title="Live telemetry data used">LIVE</span>
-                  )}
-                  <span className={`route-risk-badge ${getRiskBadgeClass(route.route_risk_level || 'LOW')}`}>
-                    {route.route_risk_level || 'LOW'} RISK
-                  </span>
-                </div>
+                <span className="route-title">
+                  <Route size={12} /> {(route.recommended_route || []).join(' → ')}
+                </span>
               </div>
-
-              {/* Dynamic Risk Comparison Section */}
-              {criterion === 'risk_adjusted' && route.route_risk_before !== undefined && (
-                <div className="route-risk-intel-banner">
-                  <div className="intel-header">
-                    <span className="intel-title">
-                      <ShieldAlert size={12} /> ML Risk: {route.ml_risk_score ?? (risk?.risk_score ?? shipment.riskScore)}/100 — {route.ml_risk_level ?? (risk?.risk_level ?? shipment.risk)}
-                    </span>
-                  </div>
-
-                  <div className="risk-comparison-grid">
-                    <div className="risk-compare-box">
-                      <span className="risk-compare-label">Baseline Route Risk</span>
-                      <strong className="risk-compare-val before">
-                        {route.route_risk_before ? `${route.route_risk_before.toFixed(2)}x` : '1.00x'}
-                      </strong>
-                    </div>
-                    <div className="risk-compare-divider">→</div>
-                    <div className="risk-compare-box recommended">
-                      <span className="risk-compare-label">Optimal Route Risk</span>
-                      <strong className="risk-compare-val after">
-                        {route.route_risk_after ? `${route.route_risk_after.toFixed(2)}x` : `${route.average_risk_weight?.toFixed(2)}x`}
-                      </strong>
-                      {route.route_risk_after && route.route_risk_before && route.route_risk_after < route.route_risk_before - 0.005 ? (
-                        <span className="risk-reduction-pill">↓ {(route.route_risk_before - route.route_risk_after).toFixed(2)}x safer</span>
-                      ) : (
-                        <span className="risk-neutral-pill">Optimal Resilient Path</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Disruption Counts Summary */}
-                  {route.external_disruptions_considered && (
-                    <div className="live-disruptions-summary">
-                      <div className="disruption-count-item">
-                        <span className="disruption-icon">⛅</span>
-                        <span>Weather: <strong>{route.weather_disruption_count || 0}</strong></span>
-                      </div>
-                      <div className="disruption-count-item">
-                        <span className="disruption-icon">⚓</span>
-                        <span>Port: <strong>{route.port_disruption_count || 0}</strong></span>
-                      </div>
-                      <div className="disruption-count-item">
-                        <span className="disruption-icon">🚚</span>
-                        <span>Traffic: <strong>{route.traffic_disruption_count || 0}</strong></span>
-                      </div>
-                    </div>
-                  )}
+              <div className="route-stats-grid">
+                <div className="route-stat">
+                  <span>Distance</span>
+                  <strong>{route.total_distance_km ? `${Math.round(route.total_distance_km).toLocaleString()} km` : '—'}</strong>
                 </div>
-              )}
-
-              <div className="route-comparison">
-                <div className="route-comparison-row">
-                  <span className="route-label current-lbl">Primary Corridor:</span>
-                  <span className="route-path-str current-str">
-                    {route.current_route.join(' → ')}
-                  </span>
+                <div className="route-stat">
+                  <span>Time</span>
+                  <strong>{route.total_time_hours ? `${Math.round(route.total_time_hours)}h` : '—'}</strong>
                 </div>
-                <div className="route-comparison-row">
-                  <span className="route-label recommended-lbl">Optimal Path:</span>
-                  <span className="route-path-str recommended-str">
-                    {route.recommended_route.join(' → ')}
-                  </span>
+                <div className="route-stat">
+                  <span>Risk Level</span>
+                  <strong className="green-txt">{route.route_risk_level || 'LOW'}</strong>
                 </div>
-              </div>
-
-              <div className="route-metrics-grid">
-                <div className="route-metric-box">
-                  <dt>Distance</dt>
-                  <dd>{route.total_distance_km ? `${route.total_distance_km.toLocaleString()} km` : 'Calculated'}</dd>
-                </div>
-                <div className="route-metric-box">
-                  <dt>Est. Duration</dt>
-                  <dd>{route.estimated_time_hours ? `${route.estimated_time_hours} hrs` : 'Standard'}</dd>
-                </div>
-                <div className="route-metric-box">
-                  <dt>Risk Factor</dt>
-                  <dd>{route.average_risk_weight ? `${route.average_risk_weight}x` : '1.00x'}</dd>
-                </div>
-                <div className="route-metric-box">
-                  <dt>Dijkstra Cost</dt>
-                  <dd>{route.total_cost ? route.total_cost.toFixed(1) : 'Optimal'}</dd>
-                </div>
-              </div>
-
-              {route.transport_modes && route.transport_modes.length > 0 && (
-                <div className="route-modes-row">
-                  <span className="modes-label">Modes:</span>
-                  {route.transport_modes.map((mode) => (
-                    <span key={mode} className="mode-pill">
-                      {mode}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Decision Reason Box */}
-              <div className="route-reason-box">
-                <TrendingDown size={13} className="reason-icon" />
-                <p>{route.decision_reason || route.reason}</p>
-              </div>
-
-              {/* Data Sources Footer */}
-              {route.data_sources && route.data_sources.length > 0 && (
-                <div className="route-sources-footer">
-                  <span className="sources-label">Sources:</span>
-                  <span className="sources-list">{route.data_sources.join(' • ')}</span>
-                </div>
-              )}
-
-              {route.segments && route.segments.length > 0 && (
-                <div className="route-corridors-list">
-                  <span className="corridors-title">Segment Corridors ({route.segments.length})</span>
-                  <div className="corridor-items">
-                    {route.segments.map((seg, idx) => (
-                      <div key={`${seg.origin}-${seg.destination}-${idx}`} className="corridor-item">
-                        <span className="corridor-hop">{idx + 1}</span>
-                        <div className="corridor-info">
-                          <strong>
-                            {seg.origin} → {seg.destination}
-                          </strong>
-                          <small>
-                            {seg.mode} · {seg.distance_km} km · {seg.base_time_hours} hrs · Risk {seg.risk_weight}x
-                          </small>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="route-algorithm-tag">
-                <span>Algorithm:</span> <strong>{route.algorithm || 'NETWORKX_DIJKSTRA'}</strong>
               </div>
             </div>
           )}
-
-          {feedback && (
-            <div className="map-feedback">
-              <Check size={14} /> {feedback}
-            </div>
-          )}
-
-          <div className="map-panel-note">
-            <Truck size={15} />
-            <p>Full real-world address resolution powered by OpenStreetMap with NetworkX Dijkstra routing.</p>
-          </div>
         </aside>
       </section>
     </div>

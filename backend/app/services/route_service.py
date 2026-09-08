@@ -5,9 +5,23 @@ Builds a multimodal directed graph representing global supply chain logistics hu
 ports, airports, intermodal rail terminals, and transit corridors.
 """
 
-from typing import Any, Optional, Union
+import asyncio
+import json
+import logging
 import math
+import os
+from typing import Any, Optional, Union
+import urllib.request
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    httpx = None
+    HTTPX_AVAILABLE = False
+
 from app.services.shipment_service import shipment_service
+
+logger = logging.getLogger(__name__)
 
 try:
     import networkx as nx
@@ -33,6 +47,16 @@ DEFAULT_NODES: dict[str, dict[str, Any]] = {
 
     # South Asia & Middle East
     "Mumbai": {"name": "Nhava Sheva Port (JNPT)", "city": "Mumbai", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 18.9647, "lon": 72.8258, "congestion_level": 58.0},
+    "Vijayawada": {"name": "Vijayawada Logistics Hub", "city": "Vijayawada", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.5062, "lon": 80.6480, "congestion_level": 35.0},
+    "Guntur": {"name": "Guntur Logistics Terminal", "city": "Guntur", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.3067, "lon": 80.4365, "congestion_level": 30.0},
+    "H_Junction": {"name": "Hanuman Junction (H Junction)", "city": "Hanuman Junction", "country": "IN", "region": "South_Asia", "type": "Road_Hub", "lat": 16.5683, "lon": 80.9496, "congestion_level": 25.0},
+    "Machilipatnam": {"name": "Machilipatnam Port & Logistics", "city": "Machilipatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 16.1808, "lon": 81.1303, "congestion_level": 20.0},
+    "Nuzuvidu": {"name": "Nuzvid Freight Center", "city": "Nuzvid", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.7850, "lon": 80.8488, "congestion_level": 20.0},
+    "Visakhapatnam": {"name": "Port of Visakhapatnam", "city": "Visakhapatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 17.6868, "lon": 83.2185, "congestion_level": 40.0},
+    "Hyderabad": {"name": "Hyderabad Logistics Center", "city": "Hyderabad", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 17.3850, "lon": 78.4867, "congestion_level": 45.0},
+    "Chennai": {"name": "Chennai Port & Hub", "city": "Chennai", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 13.0827, "lon": 80.2707, "congestion_level": 50.0},
+    "Delhi": {"name": "Delhi NCR Freight Terminal", "city": "Delhi", "country": "IN", "region": "South_Asia", "type": "Rail_Terminal", "lat": 28.6139, "lon": 77.2090, "congestion_level": 55.0},
+    "Kolkata": {"name": "Kolkata Port Gateway", "city": "Kolkata", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 22.5726, "lon": 88.3639, "congestion_level": 50.0},
     "Dubai": {"name": "Jebel Ali Port & Hub", "city": "Dubai", "country": "AE", "region": "Middle_East", "type": "Port", "lat": 25.2048, "lon": 55.2708, "congestion_level": 42.0},
     "Suez_Canal": {"name": "Suez Canal Maritime Gateway", "city": "Suez", "country": "EG", "region": "Middle_East", "type": "Transit_Waypoint", "lat": 30.5852, "lon": 32.5653, "congestion_level": 65.0},
 
@@ -88,6 +112,21 @@ DEFAULT_EDGES: list[tuple[str, str, dict[str, Any]]] = [
     ("Ho_Chi_Minh_City", "Seattle", {"distance_km": 11800.0, "base_time_hours": 380.0, "mode": "Ocean", "corridor_name": "Trans-Pacific Southeast Link", "status": "Active", "risk_weight": 1.10}),
     ("Singapore", "Sydney", {"distance_km": 6300.0, "base_time_hours": 190.0, "mode": "Ocean", "corridor_name": "Indo-Pacific Gateway", "status": "Active", "risk_weight": 1.00}),
     ("Singapore", "Malacca_Strait", {"distance_km": 250.0, "base_time_hours": 8.0, "mode": "Ocean", "corridor_name": "Malacca Strait Inbound", "status": "Active", "risk_weight": 1.10}),
+
+    # South Asia Regional & Multimodal Network
+    ("Vijayawada", "Guntur", {"distance_km": 35.0, "base_time_hours": 1.0, "mode": "Road", "corridor_name": "NH 16 Vijayawada-Guntur Expressway", "status": "Active", "risk_weight": 0.90}),
+    ("Vijayawada", "H_Junction", {"distance_km": 42.0, "base_time_hours": 1.2, "mode": "Road", "corridor_name": "NH 16 Eluru Road Trunk", "status": "Active", "risk_weight": 0.95}),
+    ("H_Junction", "Machilipatnam", {"distance_km": 45.0, "base_time_hours": 1.5, "mode": "Road", "corridor_name": "Gudivada-Machilipatnam Road", "status": "Active", "risk_weight": 0.95}),
+    ("Vijayawada", "Machilipatnam", {"distance_km": 70.0, "base_time_hours": 2.0, "mode": "Road", "corridor_name": "NH 65 Bandar Road Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Vijayawada", "Nuzuvidu", {"distance_km": 45.0, "base_time_hours": 1.3, "mode": "Road", "corridor_name": "Vijayawada-Nuzvid Highway", "status": "Active", "risk_weight": 0.95}),
+    ("H_Junction", "Nuzuvidu", {"distance_km": 28.0, "base_time_hours": 0.8, "mode": "Road", "corridor_name": "Hanuman Junction-Nuzvid Road", "status": "Active", "risk_weight": 0.90}),
+    ("Vijayawada", "Visakhapatnam", {"distance_km": 350.0, "base_time_hours": 6.5, "mode": "Road", "corridor_name": "NH 16 Coastal Trunk", "status": "Active", "risk_weight": 1.05}),
+    ("H_Junction", "Visakhapatnam", {"distance_km": 310.0, "base_time_hours": 5.8, "mode": "Road", "corridor_name": "NH 16 North Coastal Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Vijayawada", "Hyderabad", {"distance_km": 275.0, "base_time_hours": 5.0, "mode": "Road", "corridor_name": "NH 65 Hyderabad-Vijayawada Highway", "status": "Active", "risk_weight": 0.95}),
+    ("Vijayawada", "Chennai", {"distance_km": 430.0, "base_time_hours": 7.5, "mode": "Road", "corridor_name": "NH 16 Southern Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Mumbai", "Vijayawada", {"distance_km": 950.0, "base_time_hours": 18.0, "mode": "Rail", "corridor_name": "Central-Eastern Intermodal Rail", "status": "Active", "risk_weight": 1.00}),
+    ("Visakhapatnam", "Kolkata", {"distance_km": 880.0, "base_time_hours": 16.0, "mode": "Rail", "corridor_name": "East Coast Rail Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Chennai", "Singapore", {"distance_km": 2900.0, "base_time_hours": 90.0, "mode": "Ocean", "corridor_name": "Bay of Bengal - Malacca Sea Lane", "status": "Active", "risk_weight": 1.00}),
 
     # Asia -> Middle East -> Europe Maritime Corridors
     ("Malacca_Strait", "Mumbai", {"distance_km": 3900.0, "base_time_hours": 120.0, "mode": "Ocean", "corridor_name": "Bay of Bengal Maritime Route", "status": "Active", "risk_weight": 1.00}),
@@ -226,6 +265,16 @@ class SupplyChainRouteNetwork:
             return {"node_id": clean_id, **attrs}
         return None
 
+    def get_node_coordinates(self, node_name: str) -> Optional[dict[str, float]]:
+        """Retrieve latitude and longitude geographic coordinates for any network node or alias."""
+        clean = self._normalize_node_name(node_name)
+        node_data = self.get_node(clean)
+        if node_data and "lat" in node_data and "lon" in node_data:
+            return {"lat": float(node_data["lat"]), "lon": float(node_data["lon"])}
+        if clean in DEFAULT_NODES:
+            return {"lat": float(DEFAULT_NODES[clean]["lat"]), "lon": float(DEFAULT_NODES[clean]["lon"])}
+        return None
+
     def get_edges(self) -> list[dict[str, Any]]:
         """Return all directional edge corridors in the network."""
         edges = []
@@ -320,21 +369,17 @@ class SupplyChainRouteNetwork:
 
                 if ev.disruption_type == DisruptionType.WEATHER:
                     meta["weather_disruption_count"] += 1
-                    # Weather impact penalty
                     delta_r = (sev_score / 100.0) * 1.5
                 elif ev.disruption_type == DisruptionType.PORT_CONGESTION:
                     meta["port_disruption_count"] += 1
-                    # Port congestion terminal dwell penalty
                     delta_r = (sev_score / 100.0) * 2.2
                 elif ev.disruption_type == DisruptionType.TRAFFIC:
                     meta["traffic_disruption_count"] += 1
-                    # Highway/rail traffic transit delay penalty
                     delay_m = float(ev.metrics.get("delay_minutes", 45.0))
                     delta_r = min(2.5, (delay_m / 60.0) * 1.4)
                 else:
                     delta_r = (sev_score / 100.0) * 1.0
 
-                # Apply penalty to all incident edges connecting to this hotspot node
                 if self.graph.has_node(loc_name):
                     for neighbor in self.graph.neighbors(loc_name):
                         penalties[(loc_name, neighbor)] = penalties.get((loc_name, neighbor), 0.0) + delta_r
@@ -375,6 +420,7 @@ class SupplyChainRouteNetwork:
                 "transport_modes": [],
                 "segments": [],
                 "algorithm": "NETWORKX_DIJKSTRA",
+                "route_geometry": compute_path_geometry_sync([orig_clean]),
                 "ml_risk_score": ml_risk_score,
                 "ml_risk_level": "LOW",
                 "external_disruptions_considered": False,
@@ -559,6 +605,7 @@ class SupplyChainRouteNetwork:
             "reason": reason,
             "segments": segments,
             "algorithm": "NETWORKX_DIJKSTRA",
+            "route_geometry": compute_path_geometry_sync(path),
             "ml_risk_score": ml_risk_score,
             "ml_risk_level": route_risk_level,
             "external_disruptions_considered": meta["external_disruptions_considered"],
@@ -569,83 +616,132 @@ class SupplyChainRouteNetwork:
             "route_risk_after": round(avg_eff_risk, 2),
             "dynamic_risk_penalty": delta_penalty,
             "decision_reason": reason,
-            "data_sources": meta["data_sources"],
-            "is_mock_fallback_used": meta["is_mock_fallback_used"],
-        }
-
-
-    def get_network_summary(self) -> dict[str, Any]:
-        """Summary metrics of the current logistics graph topology."""
-        total_nodes = self.graph.number_of_nodes()
-        total_edges = self.graph.number_of_edges()
-        
-        regions = set()
-        modes = set()
-        ports_count = 0
-        for n_data in self.get_nodes():
-            regions.add(n_data.get("region", "Global"))
-            if n_data.get("type") == "Port":
-                ports_count += 1
-
-        for e_data in self.get_edges():
-            modes.add(e_data.get("mode", "Multimodal"))
-
-        return {
-            "total_nodes": total_nodes,
-            "total_directed_edges": total_edges,
-            "regions_covered": sorted(list(regions)),
-            "transport_modes": sorted(list(modes)),
-            "ports_count": ports_count,
-            "networkx_active": NETWORKX_AVAILABLE,
+            "data_sources": meta.get("data_sources", []),
+            "is_mock_fallback_used": meta.get("is_mock_fallback_used", False),
         }
 
     def _normalize_node_name(self, name: str) -> str:
         """Map common city names or raw shipment strings to standard graph node keys."""
         if not name:
             return ""
-        clean = name.split(",")[0].strip().replace(" ", "_")
+        raw_clean = name.strip()
+        lower_raw = raw_clean.lower()
+        first_token = raw_clean.split(",")[0].strip().replace(" ", "_")
+        lower_first = first_token.lower()
         
         # Exact alias mappings
         aliases = {
-            "LA": "Los_Angeles",
-            "L.A.": "Los_Angeles",
-            "LAX": "Los_Angeles",
-            "HK": "Hong_Kong",
-            "HKG": "Hong_Kong",
-            "SZX": "Shenzhen",
-            "PVG": "Shanghai",
-            "SHA": "Shanghai",
-            "DFW": "Dallas",
-            "ORD": "Chicago",
-            "FRA": "Frankfurt",
-            "ATL": "Atlanta",
-            "SEA": "Seattle",
-            "OAK": "Oakland",
-            "LGB": "Long_Beach",
-            "RTM": "Rotterdam",
-            "HAM": "Hamburg",
-            "ANR": "Antwerp",
-            "SIN": "Singapore",
-            "PUS": "Busan",
-            "BOM": "Mumbai",
-            "DXB": "Dubai",
-            "SYD": "Sydney",
-            "YYZ": "Toronto",
-            "MEX": "Mexico_City",
-            "MTY": "Monterrey",
-            "OKC": "Oklahoma_City",
-            "PHX": "Phoenix",
-            "Ho_Chi_Minh": "Ho_Chi_Minh_City",
-            "HCM": "Ho_Chi_Minh_City",
-            "SGN": "Ho_Chi_Minh_City",
+            "la": "Los_Angeles",
+            "l.a.": "Los_Angeles",
+            "lax": "Los_Angeles",
+            "los_angeles": "Los_Angeles",
+            "hk": "Hong_Kong",
+            "hkg": "Hong_Kong",
+            "hong_kong": "Hong_Kong",
+            "szx": "Shenzhen",
+            "shenzhen": "Shenzhen",
+            "yantian": "Shenzhen",
+            "pvg": "Shanghai",
+            "sha": "Shanghai",
+            "shanghai": "Shanghai",
+            "ningbo": "Ningbo",
+            "nbo": "Ningbo",
+            "busan": "Busan",
+            "pus": "Busan",
+            "tokyo": "Tokyo",
+            "tyo": "Tokyo",
+            "dfw": "Dallas",
+            "dallas": "Dallas",
+            "ord": "Chicago",
+            "chicago": "Chicago",
+            "fra": "Frankfurt",
+            "frankfurt": "Frankfurt",
+            "atl": "Atlanta",
+            "atlanta": "Atlanta",
+            "sea": "Seattle",
+            "seattle": "Seattle",
+            "oak": "Oakland",
+            "oakland": "Oakland",
+            "lgb": "Long_Beach",
+            "long_beach": "Long_Beach",
+            "rtm": "Rotterdam",
+            "rotterdam": "Rotterdam",
+            "ham": "Hamburg",
+            "hamburg": "Hamburg",
+            "anr": "Antwerp",
+            "antwerp": "Antwerp",
+            "sin": "Singapore",
+            "singapore": "Singapore",
+            "bom": "Mumbai",
+            "mumbai": "Mumbai",
+            "jnpt": "Mumbai",
+            "nhava_sheva": "Mumbai",
+            "dxb": "Dubai",
+            "dubai": "Dubai",
+            "jebel_ali": "Dubai",
+            "syd": "Sydney",
+            "sydney": "Sydney",
+            "yyz": "Toronto",
+            "toronto": "Toronto",
+            "mex": "Mexico_City",
+            "mexico_city": "Mexico_City",
+            "mty": "Monterrey",
+            "monterrey": "Monterrey",
+            "okc": "Oklahoma_City",
+            "oklahoma_city": "Oklahoma_City",
+            "phx": "Phoenix",
+            "phoenix": "Phoenix",
+            "ho_chi_minh": "Ho_Chi_Minh_City",
+            "hcm": "Ho_Chi_Minh_City",
+            "sgn": "Ho_Chi_Minh_City",
+            "ho_chi_minh_city": "Ho_Chi_Minh_City",
+            "saigon": "Ho_Chi_Minh_City",
+            "cat_lai": "Ho_Chi_Minh_City",
+            # South Asia Regional Aliases
+            "hjunction": "H_Junction",
+            "h_junction": "H_Junction",
+            "hanuman_junction": "H_Junction",
+            "guntur": "Guntur",
+            "vijayawada": "Vijayawada",
+            "vja": "Vijayawada",
+            "bezawada": "Vijayawada",
+            "machilipatnam": "Machilipatnam",
+            "nuzuvidu": "Nuzuvidu",
+            "nuzvid": "Nuzuvidu",
+            "vizag": "Visakhapatnam",
+            "vtz": "Visakhapatnam",
+            "visakhapatnam": "Visakhapatnam",
+            "hyd": "Hyderabad",
+            "hyderabad": "Hyderabad",
+            "chennai": "Chennai",
+            "maa": "Chennai",
+            "madras": "Chennai",
+            "delhi": "Delhi",
+            "new_delhi": "Delhi",
+            "del": "Delhi",
+            "kolkata": "Kolkata",
+            "ccu": "Kolkata",
+            "calcutta": "Kolkata",
         }
-        if clean in aliases:
-            return aliases[clean]
         
+        # 1. Alias match on full string or first token
+        if lower_raw in aliases:
+            return aliases[lower_raw]
+        if lower_first in aliases:
+            return aliases[lower_first]
+        if first_token in aliases:
+            return aliases[first_token]
+        
+        # 2. Check DEFAULT_NODES match
         for k in DEFAULT_NODES:
-            if clean.lower() == k.lower() or clean.lower().replace("_", "") == k.lower().replace("_", ""):
+            k_lower = k.lower()
+            k_stripped = k_lower.replace("_", "")
+            if lower_first == k_lower or lower_first.replace("_", "") == k_stripped:
                 return k
-        return clean
+            if lower_raw == k_lower or lower_raw.replace("_", "") == k_stripped:
+                return k
+        
+        return first_token
 
     def compute_path_metrics(
         self,
@@ -664,6 +760,7 @@ class SupplyChainRouteNetwork:
                 "average_risk_weight": 1.0,
                 "transport_modes": ["Multimodal"],
                 "segments": [],
+                "route_geometry": [],
             }
 
         edge_penalties, meta = (
@@ -728,20 +825,158 @@ class SupplyChainRouteNetwork:
         avg_eff_risk = sum(effective_risk_weights) / len(effective_risk_weights) if effective_risk_weights else 1.0
         max_risk = max(effective_risk_weights) if effective_risk_weights else 1.0
 
+        if max_risk >= 1.50 or avg_eff_risk >= 1.35:
+            route_risk_level = "CRITICAL"
+        elif max_risk >= 1.25 or avg_eff_risk >= 1.20:
+            route_risk_level = "HIGH"
+        elif max_risk >= 1.10 or avg_eff_risk >= 1.05:
+            route_risk_level = "MEDIUM"
+        else:
+            route_risk_level = "LOW"
+
         return {
             "path": path,
             "total_distance_km": round(total_distance, 1),
             "estimated_time_hours": round(total_time, 1),
             "total_cost": round(total_cost, 2),
-            "transport_modes": transport_modes or ["Multimodal"],
+            "transport_modes": transport_modes,
             "average_risk_weight": round(avg_eff_risk, 2),
-            "average_base_risk": round(avg_base_risk, 2),
             "max_segment_risk_weight": round(max_risk, 2),
+            "route_risk_level": route_risk_level,
             "segments": segments,
+            "route_geometry": compute_path_geometry_sync(path),
+        }
+
+    def get_network_summary(self) -> dict[str, Any]:
+        """Summary metrics of the current logistics graph topology."""
+        total_nodes = self.graph.number_of_nodes()
+        total_edges = self.graph.number_of_edges()
+
+        regions = set()
+        modes = set()
+        ports_count = 0
+        for n_data in self.get_nodes():
+            regions.add(n_data.get("region", "Global"))
+            if n_data.get("type") == "Port":
+                ports_count += 1
+
+        for e_data in self.get_edges():
+            modes.add(e_data.get("mode", "Multimodal"))
+
+        return {
+            "total_nodes": total_nodes,
+            "total_directed_edges": total_edges,
+            "regions_covered": sorted(list(regions)),
+            "transport_modes": sorted(list(modes)),
+            "ports_count": ports_count,
+            "networkx_active": NETWORKX_AVAILABLE,
         }
 
 
+# Global graph network singleton
 route_network = SupplyChainRouteNetwork()
+
+
+def _calc_dist_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in kilometers using the Haversine formula."""
+    R = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (math.sin(d_lat / 2.0) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2.0) ** 2)
+    c = 2.0 * math.atan2(math.sqrt(max(0.0, a)), math.sqrt(max(0.0, 1.0 - a)))
+    return R * c
+
+
+async def fetch_osrm_segment(
+    lat1: float,
+    lon1: float,
+    lat2: float,
+    lon2: float,
+    client: Optional[Any] = None,
+) -> list[list[float]]:
+    """
+    Call the free OSRM public routing API to fetch real road geometry between two points.
+    Only intra-continental road legs under 800 km are queried to prevent transatlantic driving anomalies.
+    """
+    dist_km = _calc_dist_km(lat1, lon1, lat2, lon2)
+    if dist_km > 800.0 or not HTTPX_AVAILABLE or httpx is None:
+        return [[lat1, lon1], [lat2, lon2]]
+
+    url = f"https://router.project-osrm.org/route/v1/driving/{lon1:.6f},{lat1:.6f};{lon2:.6f},{lat2:.6f}?overview=full&geometries=geojson"
+    try:
+        if client is not None:
+            resp = await client.get(url)
+        else:
+            async with httpx.AsyncClient(timeout=2.0) as c:
+                resp = await c.get(url)
+        if resp.status_code == 200:
+            data = resp.json()
+            routes = data.get("routes", [])
+            if routes and "geometry" in routes[0] and "coordinates" in routes[0]["geometry"]:
+                coords = routes[0]["geometry"]["coordinates"]  # [lon, lat]
+                if coords and len(coords) >= 2:
+                    last_lat, last_lon = coords[-1][1], coords[-1][0]
+                    if _calc_dist_km(last_lat, last_lon, lat2, lon2) < 50.0:
+                        return [[lat, lon] for lon, lat in coords]
+    except Exception as e:
+        logger.debug("OSRM segment routing failed for (%s,%s)->(%s,%s): %s", lat1, lon1, lat2, lon2, e)
+    return [[lat1, lon1], [lat2, lon2]]
+
+
+async def compute_path_geometry(path: list[str]) -> list[list[float]]:
+    """
+    Take the full ordered node path from the Dijkstra route, and for every consecutive pair of nodes,
+    call OSRM to get the real road geometry, then concatenate all segments into one continuous ordered coordinate list.
+    """
+    if not path or len(path) < 2:
+        return []
+
+    coords = [route_network.get_node_coordinates(n) for n in path]
+    valid_coords = [c for c in coords if c and "lat" in c and "lon" in c]
+
+    if not HTTPX_AVAILABLE or httpx is None:
+        return [[c["lat"], c["lon"]] for c in valid_coords]
+
+    try:
+        async with httpx.AsyncClient(timeout=2.5) as client:
+            tasks = []
+            for i in range(len(valid_coords) - 1):
+                c1 = valid_coords[i]
+                c2 = valid_coords[i + 1]
+                tasks.append(fetch_osrm_segment(c1["lat"], c1["lon"], c2["lat"], c2["lon"], client=client))
+
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        results = []
+        for i in range(len(valid_coords) - 1):
+            c1 = valid_coords[i]
+            c2 = valid_coords[i + 1]
+            results.append([[c1["lat"], c1["lon"]], [c2["lat"], c2["lon"]]])
+
+    full_geometry = []
+    for seg in results:
+        if isinstance(seg, Exception) or not seg:
+            continue
+        if full_geometry and seg and full_geometry[-1] == seg[0]:
+            full_geometry.extend(seg[1:])
+        elif full_geometry:
+            full_geometry.extend(seg)
+        else:
+            full_geometry.extend(seg)
+
+    return full_geometry
+
+
+def compute_path_geometry_sync(path: list[str]) -> list[list[float]]:
+    """Synchronous instant node coordinate path geometry."""
+    if not path or len(path) < 2:
+        return []
+    coords = [route_network.get_node_coordinates(n) for n in path]
+    valid_coords = [c for c in coords if c and "lat" in c and "lon" in c]
+    if len(valid_coords) < 2:
+        return [[c["lat"], c["lon"]] for c in valid_coords]
+    return [[c["lat"], c["lon"]] for c in valid_coords]
 
 
 class RouteService:
@@ -818,6 +1053,7 @@ class RouteService:
                 "route_risk_level": "LOW",
                 "transport_modes": ["Multimodal"],
                 "segments": primary_live_metrics["segments"],
+                "route_geometry": primary_live_metrics.get("route_geometry", []),
                 "external_disruptions_considered": False,
                 "weather_disruption_count": 0,
                 "port_disruption_count": 0,
@@ -894,7 +1130,7 @@ class RouteService:
             "shipment_id": shipment["shipment_id"],
             "origin": orig_node,
             "destination": dest_node,
-            "current_route": [origin_str.split(",")[0].strip(), curr_loc_str.split(",")[0].strip(), dest_str.split(",")[0].strip()] if curr_loc_str else primary_path,
+            "current_route": primary_path,
             "recommended_route": recommended_path,
             "total_distance_km": opt_details.get("total_distance_km"),
             "estimated_time_hours": opt_details.get("estimated_time_hours"),
@@ -905,6 +1141,7 @@ class RouteService:
             "segments": opt_details.get("segments"),
             "reason": reason,
             "algorithm": "NETWORKX_DIJKSTRA",
+            "route_geometry": opt_details.get("route_geometry") or compute_path_geometry_sync(recommended_path),
             "ml_risk_score": ml_risk_score,
             "ml_risk_level": ml_risk_level,
             "external_disruptions_considered": opt_details.get("external_disruptions_considered", True),
@@ -990,7 +1227,227 @@ class RouteService:
                 pass
             raise e
 
+    def simulate_what_if(
+        self,
+        origin: Optional[str] = None,
+        destination: Optional[str] = None,
+        shipment_id: Optional[str] = None,
+        simulated_mode: Optional[str] = None,
+        weather_severity: Optional[float] = None,
+        port_congestion: Optional[float] = None,
+        customs_risk: Optional[float] = None,
+        priority_level: Optional[str] = None,
+        sla_days_delta: Optional[float] = 0.0,
+        avoid_nodes: Optional[list[str]] = None,
+    ) -> dict[str, Any]:
+        """
+        Interactive What-If Scenario Simulation Engine.
+        Simulates operational perturbations (transport mode shifts, weather disruptions,
+        port congestion, customs inspection, SLA changes) and calculates dynamic route
+        alternatives, travel metrics, and dual-model (GNN + XGBoost) cognitive risk impacts.
+        """
+        from app.services.gnn_service import gnn_service
+        from app.services.risk_service import risk_service
+        from app.schemas.predictions import RiskPredictionRequest
+
+        # Resolve Origin and Destination
+        orig_resolved = origin
+        dest_resolved = destination
+        shipment_obj = None
+
+        if shipment_id:
+            shipment_obj = shipment_service.get_shipment_by_id(shipment_id)
+            if shipment_obj:
+                s_dict = shipment_obj.to_dict() if hasattr(shipment_obj, "to_dict") else dict(shipment_obj)
+                if not orig_resolved:
+                    orig_resolved = s_dict.get("origin_location") or s_dict.get("origin") or "Shanghai"
+                if not dest_resolved:
+                    dest_resolved = s_dict.get("destination_location") or s_dict.get("destination") or "Long_Beach"
+
+        if not orig_resolved:
+            orig_resolved = "Shanghai"
+        if not dest_resolved:
+            dest_resolved = "Long_Beach"
+
+        orig_clean = self.network._normalize_node_name(orig_resolved)
+        dest_clean = self.network._normalize_node_name(dest_resolved)
+
+        # 1. Baseline Route & Metrics
+        baseline_route = self.network.dijkstra_shortest_path(
+            origin=orig_clean,
+            destination=dest_clean,
+            criterion="time",
+            avoid_nodes=None,
+            use_realtime_disruptions=False,
+        )
+
+        baseline_tx = {
+            "origin": orig_clean,
+            "destination": dest_clean,
+            "transport_mode": "Ocean" if "Ocean" in baseline_route["transport_modes"] else "Road",
+            "route_distance_km": baseline_route["total_distance_km"],
+            "planned_duration_hours": baseline_route["estimated_time_hours"],
+            "weather_severity_index": 15.0,
+            "origin_port_congestion_index": 25.0,
+            "dest_port_congestion_index": 25.0,
+            "customs_inspection_risk": 0.20,
+            "carrier_reliability_score": 0.90,
+            "priority_level": "Standard",
+        }
+        if shipment_obj:
+            s_dict = shipment_obj.to_dict() if hasattr(shipment_obj, "to_dict") else dict(shipment_obj)
+            for k in ["transport_mode", "weather_severity_index", "origin_port_congestion_index", "dest_port_congestion_index", "customs_inspection_risk", "priority_level"]:
+                if s_dict.get(k) is not None:
+                    baseline_tx[k] = s_dict[k]
+
+        baseline_gnn = gnn_service.predict_gnn_risk(baseline_tx)
+        baseline_xgb_score = 50
+        try:
+            req_xgb = RiskPredictionRequest(
+                shipment_id=shipment_id,
+                origin=orig_clean,
+                destination=dest_clean,
+                transport_mode=baseline_tx.get("transport_mode", "Ocean"),
+                route_distance_km=baseline_route["total_distance_km"],
+                planned_duration_hours=baseline_route["estimated_time_hours"],
+            )
+            xgb_res = risk_service.predict_risk(req_xgb)
+            if xgb_res:
+                baseline_xgb_score = xgb_res.risk_score
+        except Exception:
+            pass
+
+        baseline_fused_prob = 0.55 * baseline_gnn["risk_probability"] + 0.45 * (baseline_xgb_score / 100.0)
+        baseline_fused_score = int(round(baseline_fused_prob * 100))
+        baseline_fused_tier = "CRITICAL" if baseline_fused_score >= 75 else ("HIGH" if baseline_fused_score >= 55 else ("MEDIUM" if baseline_fused_score >= 35 else "LOW"))
+
+        # 2. Simulated Perturbations & Route Optimization
+        sim_weather = weather_severity if weather_severity is not None else float(baseline_tx.get("weather_severity_index", 15.0))
+        sim_port = port_congestion if port_congestion is not None else float(baseline_tx.get("origin_port_congestion_index", 25.0))
+        sim_customs = customs_risk if customs_risk is not None else float(baseline_tx.get("customs_inspection_risk", 0.20))
+        sim_priority = priority_level or baseline_tx.get("priority_level", "Standard")
+        sim_mode = simulated_mode or baseline_tx.get("transport_mode", "Ocean")
+        sla_delta = float(sla_days_delta or 0.0)
+
+        # Dynamic Dijkstra with simulated conditions & avoid_nodes
+        sim_risk_ml = int(round((sim_weather / 100.0 * 0.4 + sim_port / 100.0 * 0.4 + sim_customs * 0.2) * 100))
+        
+        simulated_route = self.network.dijkstra_shortest_path(
+            origin=orig_clean,
+            destination=dest_clean,
+            criterion="risk_adjusted",
+            avoid_nodes=avoid_nodes,
+            ml_risk_score=sim_risk_ml,
+            use_realtime_disruptions=True,
+        )
+
+        sim_tx = {
+            "origin": orig_clean,
+            "destination": dest_clean,
+            "transport_mode": sim_mode,
+            "route_distance_km": simulated_route["total_distance_km"],
+            "planned_duration_hours": max(4.0, simulated_route["estimated_time_hours"] + (sla_delta * 24.0)),
+            "weather_severity_index": sim_weather,
+            "origin_port_congestion_index": sim_port,
+            "dest_port_congestion_index": sim_port,
+            "customs_inspection_risk": sim_customs,
+            "carrier_reliability_score": 0.95 if sim_priority == "Urgent" else 0.85,
+            "priority_level": sim_priority,
+        }
+
+        sim_gnn = gnn_service.predict_gnn_risk(sim_tx)
+        sim_xgb_score = 50
+        try:
+            req_sim_xgb = RiskPredictionRequest(
+                shipment_id=shipment_id,
+                origin=orig_clean,
+                destination=dest_clean,
+                transport_mode=sim_mode if sim_mode in ["Air", "Ocean", "Rail", "Road"] else "Ocean",
+                route_distance_km=simulated_route["total_distance_km"],
+                planned_duration_hours=sim_tx["planned_duration_hours"],
+                weather_severity_index=sim_weather,
+                origin_port_congestion_index=sim_port,
+                dest_port_congestion_index=sim_port,
+                customs_inspection_risk=sim_customs,
+                priority_level=sim_priority if sim_priority in ["Standard", "High", "Urgent"] else "Standard",
+            )
+            sim_xgb_res = risk_service.predict_risk(req_sim_xgb)
+            if sim_xgb_res:
+                sim_xgb_score = sim_xgb_res.risk_score
+        except Exception:
+            pass
+
+        sim_fused_prob = 0.55 * sim_gnn["risk_probability"] + 0.45 * (sim_xgb_score / 100.0)
+        sim_fused_score = int(round(sim_fused_prob * 100))
+        sim_fused_tier = "CRITICAL" if sim_fused_score >= 75 else ("HIGH" if sim_fused_score >= 55 else ("MEDIUM" if sim_fused_score >= 35 else "LOW"))
+
+        # 3. Compute Delta Comparisons
+        risk_score_delta = sim_fused_score - baseline_fused_score
+        time_delta_hours = round(simulated_route["estimated_time_hours"] - baseline_route["estimated_time_hours"], 1)
+        dist_delta_km = round(simulated_route["total_distance_km"] - baseline_route["total_distance_km"], 1)
+        cost_delta_pct = round(((simulated_route["total_cost"] - baseline_route["total_cost"]) / max(1.0, baseline_route["total_cost"])) * 100.0, 1)
+
+        if risk_score_delta <= -15:
+            feasibility = "HIGHLY_RECOMMENDED"
+            rec = f"Simulated configuration achieves significant risk reduction of {abs(risk_score_delta)} points. Recommended for active execution."
+        elif risk_score_delta < 0:
+            feasibility = "FAVORABLE_TRADE_OFF"
+            rec = f"Moderate risk reduction of {abs(risk_score_delta)} points achieved with {abs(time_delta_hours)}h transit variance."
+        elif risk_score_delta == 0:
+            feasibility = "NEUTRAL"
+            rec = "Simulated scenario maintains equivalent operational risk profile."
+        else:
+            feasibility = "ELEVATED_EXPOSURE"
+            rec = f"Simulated conditions increase disruption vulnerability (+{risk_score_delta} risk points). Consider alternative routing or buffer margin."
+
+        return {
+            "shipment_id": shipment_id,
+            "origin": orig_clean,
+            "destination": dest_clean,
+            "baseline": {
+                "path": baseline_route["path"],
+                "total_distance_km": baseline_route["total_distance_km"],
+                "estimated_time_hours": baseline_route["estimated_time_hours"],
+                "transport_modes": baseline_route["transport_modes"],
+                "fused_risk_score": baseline_fused_score,
+                "fused_risk_tier": baseline_fused_tier,
+                "gnn_risk_score": baseline_gnn["risk_score"],
+                "xgboost_risk_score": baseline_xgb_score,
+                "effective_cost": baseline_route["total_cost"],
+                "route_geometry": baseline_route.get("route_geometry", []),
+            },
+            "simulated": {
+                "path": simulated_route["path"],
+                "total_distance_km": simulated_route["total_distance_km"],
+                "estimated_time_hours": simulated_route["estimated_time_hours"],
+                "transport_modes": simulated_route["transport_modes"],
+                "fused_risk_score": sim_fused_score,
+                "fused_risk_tier": sim_fused_tier,
+                "gnn_risk_score": sim_gnn["risk_score"],
+                "xgboost_risk_score": sim_xgb_score,
+                "effective_cost": simulated_route["total_cost"],
+                "route_geometry": simulated_route.get("route_geometry", []),
+            },
+            "delta": {
+                "risk_score_delta": risk_score_delta,
+                "time_delta_hours": time_delta_hours,
+                "distance_delta_km": dist_delta_km,
+                "cost_delta_pct": cost_delta_pct,
+                "is_risk_reduced": risk_score_delta < 0,
+            },
+            "feasibility_status": feasibility,
+            "recommendation": rec,
+            "parameter_adjustments": {
+                "simulated_mode": sim_mode,
+                "weather_severity": sim_weather,
+                "port_congestion": sim_port,
+                "customs_risk": sim_customs,
+                "priority_level": sim_priority,
+                "sla_days_delta": sla_delta,
+                "avoid_nodes": avoid_nodes or [],
+            }
+        }
+
 
 route_service = RouteService()
-
 

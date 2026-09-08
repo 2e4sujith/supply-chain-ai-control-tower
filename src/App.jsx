@@ -22,6 +22,7 @@ function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ai-insights" element={<AIInsights />} />
+          <Route path="/insights" element={<AIInsights />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

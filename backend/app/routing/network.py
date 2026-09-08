@@ -32,6 +32,16 @@ DEFAULT_NODES = {
 
     # South Asia & Middle East
     "Mumbai": {"name": "Nhava Sheva Port (JNPT)", "city": "Mumbai", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 18.9647, "lon": 72.8258, "congestion_level": 58.0},
+    "Vijayawada": {"name": "Vijayawada Logistics Hub", "city": "Vijayawada", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.5062, "lon": 80.6480, "congestion_level": 35.0},
+    "Guntur": {"name": "Guntur Logistics Terminal", "city": "Guntur", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.3067, "lon": 80.4365, "congestion_level": 30.0},
+    "H_Junction": {"name": "Hanuman Junction (H Junction)", "city": "Hanuman Junction", "country": "IN", "region": "South_Asia", "type": "Road_Hub", "lat": 16.5683, "lon": 80.9496, "congestion_level": 25.0},
+    "Machilipatnam": {"name": "Machilipatnam Port & Logistics", "city": "Machilipatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 16.1808, "lon": 81.1303, "congestion_level": 20.0},
+    "Nuzuvidu": {"name": "Nuzvid Freight Center", "city": "Nuzvid", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.7850, "lon": 80.8488, "congestion_level": 20.0},
+    "Visakhapatnam": {"name": "Port of Visakhapatnam", "city": "Visakhapatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 17.6868, "lon": 83.2185, "congestion_level": 40.0},
+    "Hyderabad": {"name": "Hyderabad Logistics Center", "city": "Hyderabad", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 17.3850, "lon": 78.4867, "congestion_level": 45.0},
+    "Chennai": {"name": "Chennai Port & Hub", "city": "Chennai", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 13.0827, "lon": 80.2707, "congestion_level": 50.0},
+    "Delhi": {"name": "Delhi NCR Freight Terminal", "city": "Delhi", "country": "IN", "region": "South_Asia", "type": "Rail_Terminal", "lat": 28.6139, "lon": 77.2090, "congestion_level": 55.0},
+    "Kolkata": {"name": "Kolkata Port Gateway", "city": "Kolkata", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 22.5726, "lon": 88.3639, "congestion_level": 50.0},
     "Dubai": {"name": "Jebel Ali Port & Hub", "city": "Dubai", "country": "AE", "region": "Middle_East", "type": "Port", "lat": 25.2048, "lon": 55.2708, "congestion_level": 42.0},
     "Suez_Canal": {"name": "Suez Canal Maritime Gateway", "city": "Suez", "country": "EG", "region": "Middle_East", "type": "Transit_Waypoint", "lat": 30.5852, "lon": 32.5653, "congestion_level": 65.0},
 
@@ -87,6 +97,21 @@ DEFAULT_EDGES = [
     ("Ho_Chi_Minh_City", "Seattle", {"distance_km": 11800.0, "base_time_hours": 380.0, "mode": "Ocean", "corridor_name": "Trans-Pacific Southeast Link", "status": "Active", "risk_weight": 1.10}),
     ("Singapore", "Sydney", {"distance_km": 6300.0, "base_time_hours": 190.0, "mode": "Ocean", "corridor_name": "Indo-Pacific Gateway", "status": "Active", "risk_weight": 1.00}),
     ("Singapore", "Malacca_Strait", {"distance_km": 250.0, "base_time_hours": 8.0, "mode": "Ocean", "corridor_name": "Malacca Strait Inbound", "status": "Active", "risk_weight": 1.10}),
+
+    # South Asia Regional & Multimodal Network
+    ("Vijayawada", "Guntur", {"distance_km": 35.0, "base_time_hours": 1.0, "mode": "Road", "corridor_name": "NH 16 Vijayawada-Guntur Expressway", "status": "Active", "risk_weight": 0.90}),
+    ("Vijayawada", "H_Junction", {"distance_km": 42.0, "base_time_hours": 1.2, "mode": "Road", "corridor_name": "NH 16 Eluru Road Trunk", "status": "Active", "risk_weight": 0.95}),
+    ("H_Junction", "Machilipatnam", {"distance_km": 45.0, "base_time_hours": 1.5, "mode": "Road", "corridor_name": "Gudivada-Machilipatnam Road", "status": "Active", "risk_weight": 0.95}),
+    ("Vijayawada", "Machilipatnam", {"distance_km": 70.0, "base_time_hours": 2.0, "mode": "Road", "corridor_name": "NH 65 Bandar Road Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Vijayawada", "Nuzuvidu", {"distance_km": 45.0, "base_time_hours": 1.3, "mode": "Road", "corridor_name": "Vijayawada-Nuzvid Highway", "status": "Active", "risk_weight": 0.95}),
+    ("H_Junction", "Nuzuvidu", {"distance_km": 28.0, "base_time_hours": 0.8, "mode": "Road", "corridor_name": "Hanuman Junction-Nuzvid Road", "status": "Active", "risk_weight": 0.90}),
+    ("Vijayawada", "Visakhapatnam", {"distance_km": 350.0, "base_time_hours": 6.5, "mode": "Road", "corridor_name": "NH 16 Coastal Trunk", "status": "Active", "risk_weight": 1.05}),
+    ("H_Junction", "Visakhapatnam", {"distance_km": 310.0, "base_time_hours": 5.8, "mode": "Road", "corridor_name": "NH 16 North Coastal Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Vijayawada", "Hyderabad", {"distance_km": 275.0, "base_time_hours": 5.0, "mode": "Road", "corridor_name": "NH 65 Hyderabad-Vijayawada Highway", "status": "Active", "risk_weight": 0.95}),
+    ("Vijayawada", "Chennai", {"distance_km": 430.0, "base_time_hours": 7.5, "mode": "Road", "corridor_name": "NH 16 Southern Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Mumbai", "Vijayawada", {"distance_km": 950.0, "base_time_hours": 18.0, "mode": "Rail", "corridor_name": "Central-Eastern Intermodal Rail", "status": "Active", "risk_weight": 1.00}),
+    ("Visakhapatnam", "Kolkata", {"distance_km": 880.0, "base_time_hours": 16.0, "mode": "Rail", "corridor_name": "East Coast Rail Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Chennai", "Singapore", {"distance_km": 2900.0, "base_time_hours": 90.0, "mode": "Ocean", "corridor_name": "Bay of Bengal - Malacca Sea Lane", "status": "Active", "risk_weight": 1.00}),
 
     # Asia -> Middle East -> Europe Maritime Corridors
     ("Malacca_Strait", "Mumbai", {"distance_km": 3900.0, "base_time_hours": 120.0, "mode": "Ocean", "corridor_name": "Bay of Bengal Maritime Route", "status": "Active", "risk_weight": 1.00}),
@@ -315,49 +340,124 @@ class SupplyChainRouteNetwork:
         """Map common city names or raw shipment strings to standard graph node keys."""
         if not name:
             return ""
-        clean = name.split(",")[0].strip().replace(" ", "_")
+        raw_clean = name.strip()
+        lower_raw = raw_clean.lower()
+        first_token = raw_clean.split(",")[0].strip().replace(" ", "_")
+        lower_first = first_token.lower()
         
         # Exact alias mappings
         aliases = {
-            "LA": "Los_Angeles",
-            "L.A.": "Los_Angeles",
-            "LAX": "Los_Angeles",
-            "HK": "Hong_Kong",
-            "HKG": "Hong_Kong",
-            "SZX": "Shenzhen",
-            "PVG": "Shanghai",
-            "SHA": "Shanghai",
-            "DFW": "Dallas",
-            "ORD": "Chicago",
-            "FRA": "Frankfurt",
-            "ATL": "Atlanta",
-            "SEA": "Seattle",
-            "OAK": "Oakland",
-            "LGB": "Long_Beach",
-            "RTM": "Rotterdam",
-            "HAM": "Hamburg",
-            "ANR": "Antwerp",
-            "SIN": "Singapore",
-            "PUS": "Busan",
-            "BOM": "Mumbai",
-            "DXB": "Dubai",
-            "SYD": "Sydney",
-            "YYZ": "Toronto",
-            "MEX": "Mexico_City",
-            "MTY": "Monterrey",
-            "OKC": "Oklahoma_City",
-            "PHX": "Phoenix",
-            "Ho_Chi_Minh": "Ho_Chi_Minh_City",
-            "HCM": "Ho_Chi_Minh_City",
-            "SGN": "Ho_Chi_Minh_City",
+            "la": "Los_Angeles",
+            "l.a.": "Los_Angeles",
+            "lax": "Los_Angeles",
+            "los_angeles": "Los_Angeles",
+            "hk": "Hong_Kong",
+            "hkg": "Hong_Kong",
+            "hong_kong": "Hong_Kong",
+            "szx": "Shenzhen",
+            "shenzhen": "Shenzhen",
+            "yantian": "Shenzhen",
+            "pvg": "Shanghai",
+            "sha": "Shanghai",
+            "shanghai": "Shanghai",
+            "ningbo": "Ningbo",
+            "nbo": "Ningbo",
+            "busan": "Busan",
+            "pus": "Busan",
+            "tokyo": "Tokyo",
+            "tyo": "Tokyo",
+            "dfw": "Dallas",
+            "dallas": "Dallas",
+            "ord": "Chicago",
+            "chicago": "Chicago",
+            "fra": "Frankfurt",
+            "frankfurt": "Frankfurt",
+            "atl": "Atlanta",
+            "atlanta": "Atlanta",
+            "sea": "Seattle",
+            "seattle": "Seattle",
+            "oak": "Oakland",
+            "oakland": "Oakland",
+            "lgb": "Long_Beach",
+            "long_beach": "Long_Beach",
+            "rtm": "Rotterdam",
+            "rotterdam": "Rotterdam",
+            "ham": "Hamburg",
+            "hamburg": "Hamburg",
+            "anr": "Antwerp",
+            "antwerp": "Antwerp",
+            "sin": "Singapore",
+            "singapore": "Singapore",
+            "bom": "Mumbai",
+            "mumbai": "Mumbai",
+            "jnpt": "Mumbai",
+            "nhava_sheva": "Mumbai",
+            "dxb": "Dubai",
+            "dubai": "Dubai",
+            "jebel_ali": "Dubai",
+            "syd": "Sydney",
+            "sydney": "Sydney",
+            "yyz": "Toronto",
+            "toronto": "Toronto",
+            "mex": "Mexico_City",
+            "mexico_city": "Mexico_City",
+            "mty": "Monterrey",
+            "monterrey": "Monterrey",
+            "okc": "Oklahoma_City",
+            "oklahoma_city": "Oklahoma_City",
+            "phx": "Phoenix",
+            "phoenix": "Phoenix",
+            "ho_chi_minh": "Ho_Chi_Minh_City",
+            "hcm": "Ho_Chi_Minh_City",
+            "sgn": "Ho_Chi_Minh_City",
+            "ho_chi_minh_city": "Ho_Chi_Minh_City",
+            "saigon": "Ho_Chi_Minh_City",
+            "cat_lai": "Ho_Chi_Minh_City",
+            # South Asia Regional Aliases
+            "hjunction": "H_Junction",
+            "h_junction": "H_Junction",
+            "hanuman_junction": "H_Junction",
+            "guntur": "Guntur",
+            "vijayawada": "Vijayawada",
+            "vja": "Vijayawada",
+            "bezawada": "Vijayawada",
+            "machilipatnam": "Machilipatnam",
+            "nuzuvidu": "Nuzuvidu",
+            "nuzvid": "Nuzuvidu",
+            "vizag": "Visakhapatnam",
+            "vtz": "Visakhapatnam",
+            "visakhapatnam": "Visakhapatnam",
+            "hyd": "Hyderabad",
+            "hyderabad": "Hyderabad",
+            "chennai": "Chennai",
+            "maa": "Chennai",
+            "madras": "Chennai",
+            "delhi": "Delhi",
+            "new_delhi": "Delhi",
+            "del": "Delhi",
+            "kolkata": "Kolkata",
+            "ccu": "Kolkata",
+            "calcutta": "Kolkata",
         }
-        if clean in aliases:
-            return aliases[clean]
         
+        # 1. Alias match on full string or first token
+        if lower_raw in aliases:
+            return aliases[lower_raw]
+        if lower_first in aliases:
+            return aliases[lower_first]
+        if first_token in aliases:
+            return aliases[first_token]
+        
+        # 2. Check DEFAULT_NODES match
         for k in DEFAULT_NODES:
-            if clean.lower() == k.lower() or clean.lower().replace("_", "") == k.lower().replace("_", ""):
+            k_lower = k.lower()
+            k_stripped = k_lower.replace("_", "")
+            if lower_first == k_lower or lower_first.replace("_", "") == k_stripped:
                 return k
-        return clean
+            if lower_raw == k_lower or lower_raw.replace("_", "") == k_stripped:
+                return k
+        
+        return first_token
 
 
 route_network = SupplyChainRouteNetwork()

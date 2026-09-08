@@ -237,6 +237,33 @@ export async function predictRisk(payload) {
     })
 }
 
+export async function predictGNNRisk(payload) {
+    const body = typeof payload === 'string' ? { shipment_id: payload } : payload
+    return request('/api/predictions/gnn', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    })
+}
+
+export async function compareModels(payload) {
+    const body = typeof payload === 'string' ? { shipment_id: payload } : payload
+    return request('/api/predictions/compare', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    })
+}
+
+export async function getModelBenchmarkReport() {
+    return request('/api/predictions/models/comparison')
+}
+
+export async function simulateWhatIf(payload) {
+    return request('/api/routes/what-if', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    })
+}
+
 export async function getPredictionHistory(shipmentId, limit = 20) {
     return request(`/api/predictions/history/${encodeURIComponent(shipmentId)}?limit=${limit}`)
 }
