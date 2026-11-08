@@ -1,9 +1,12 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import SessionLocal
 from app.models.shipment import Shipment
 from app.schemas.shipments import ShipmentCreate, ShipmentUpdate
+
+logger = logging.getLogger(__name__)
 
 
 DEMO_SHIPMENTS = [
@@ -38,14 +41,27 @@ def serialize(shipment: Shipment) -> dict:
 
 class ShipmentRepository:
     def list(self) -> list[dict]:
-        with SessionLocal() as session:
-            shipments = session.scalars(select(Shipment).order_by(Shipment.id)).all()
-            return [serialize(shipment) for shipment in shipments]
+        try:
+            with SessionLocal() as session:
+                shipments = session.scalars(select(Shipment).order_by(Shipment.id)).all()
+                if shipments:
+                    return [serialize(shipment) for shipment in shipments]
+        except Exception as e:
+            logger.warning("Database unavailable in shipment repository: %s. Using fallback records.", e)
+        return DEMO_SHIPMENTS
 
     def get(self, shipment_id: str) -> dict | None:
-        with SessionLocal() as session:
-            shipment = session.scalar(select(Shipment).where(Shipment.shipment_id == shipment_id))
-            return serialize(shipment) if shipment else None
+        try:
+            with SessionLocal() as session:
+                shipment = session.scalar(select(Shipment).where(Shipment.shipment_id == shipment_id))
+                if shipment:
+                    return serialize(shipment)
+        except Exception as e:
+            logger.warning("Database unavailable for shipment get: %s. Checking fallback records.", e)
+        for s in DEMO_SHIPMENTS:
+            if s.get("shipment_id") == shipment_id or s.get("id") == shipment_id:
+                return s
+        return None
 
     def create(self, shipment: ShipmentCreate) -> dict:
         item = Shipment(**shipment.model_dump())

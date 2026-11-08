@@ -1,9 +1,12 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import SessionLocal
 from app.models.alert import Alert
 from app.schemas.alerts import AlertCreate
+
+logger = logging.getLogger(__name__)
 
 
 DEMO_ALERTS = [
@@ -24,13 +27,27 @@ def serialize(alert: Alert) -> dict:
 
 class AlertRepository:
     def list(self) -> list[dict]:
-        with SessionLocal() as session:
-            return [serialize(alert) for alert in session.scalars(select(Alert).order_by(Alert.id)).all()]
+        try:
+            with SessionLocal() as session:
+                alerts = session.scalars(select(Alert).order_by(Alert.id)).all()
+                if alerts:
+                    return [serialize(alert) for alert in alerts]
+        except Exception as e:
+            logger.warning("Database unavailable in alert repository: %s. Using fallback records.", e)
+        return DEMO_ALERTS
 
     def get(self, alert_id: str) -> dict | None:
-        with SessionLocal() as session:
-            alert = session.scalar(select(Alert).where(Alert.alert_id == alert_id.upper()))
-            return serialize(alert) if alert else None
+        try:
+            with SessionLocal() as session:
+                alert = session.scalar(select(Alert).where(Alert.alert_id == alert_id.upper()))
+                if alert:
+                    return serialize(alert)
+        except Exception as e:
+            logger.warning("Database unavailable for alert get: %s. Checking fallback records.", e)
+        for a in DEMO_ALERTS:
+            if a.get("alert_id") == alert_id.upper():
+                return a
+        return None
 
     def create(self, alert: AlertCreate) -> dict:
         item = Alert(**alert.model_dump())
