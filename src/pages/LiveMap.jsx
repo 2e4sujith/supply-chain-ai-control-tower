@@ -20,7 +20,14 @@ import {
   GitBranch,
   X,
   Play,
-  Lightbulb
+  Lightbulb,
+  Clock,
+  Layers,
+  Milestone,
+  Navigation,
+  Plane,
+  Ship,
+  ShieldCheck,
 } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { getAlternativeRoute, getShipments, predictRisk, predictGNNRisk, simulateWhatIf } from '../services/api.js'
@@ -37,6 +44,11 @@ function LiveMap() {
   const [criterion, setCriterion] = useState('risk_adjusted')
   const [feedback, setFeedback] = useState('')
   const [route, setRoute] = useState(null)
+  const [objectiveRoutes, setObjectiveRoutes] = useState({
+    distance: null,
+    time: null,
+    risk_adjusted: null,
+  })
   const [risk, setRisk] = useState(null)
   const [gnnRisk, setGnnRisk] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -157,13 +169,46 @@ function LiveMap() {
     }
   }, [shipment?.id, shipment?.origin, shipment?.destination, shipment?.currentLocation])
 
-  // Reset route and telemetrics immediately when switching active shipment to prevent stale routes
+  // Reset route and telemetrics immediately when switching active shipment to prevent stale routes,
+  // and load all 3 route objectives in parallel for instant switching and multi-objective comparison.
   useEffect(() => {
     setRoute(null)
+    setObjectiveRoutes({ distance: null, time: null, risk_adjusted: null })
     setPendingRecommendation(null)
     setRisk(null)
     setGnnRisk(null)
     setWhatIfResult(null)
+
+    if (!shipment?.id) return
+    let isMounted = true
+
+    async function fetchAllObjectives() {
+      try {
+        const [distRes, timeRes, riskRes] = await Promise.allSettled([
+          getAlternativeRoute(shipment.id, 'distance'),
+          getAlternativeRoute(shipment.id, 'time'),
+          getAlternativeRoute(shipment.id, 'risk_adjusted'),
+        ])
+        if (!isMounted) return
+        const newObj = {
+          distance: distRes.status === 'fulfilled' ? distRes.value : null,
+          time: timeRes.status === 'fulfilled' ? timeRes.value : null,
+          risk_adjusted: riskRes.status === 'fulfilled' ? riskRes.value : null,
+        }
+        setObjectiveRoutes(newObj)
+        const activeObjRoute = newObj[criterion] || newObj.risk_adjusted || newObj.distance || newObj.time
+        if (activeObjRoute) {
+          setRoute(activeObjRoute)
+        }
+      } catch (err) {
+        console.warn('Failed to load multi-objective routes:', err)
+      }
+    }
+
+    fetchAllObjectives()
+    return () => {
+      isMounted = false
+    }
   }, [shipment?.id])
 
   // Route Continuous Monitoring Hook
@@ -186,6 +231,7 @@ function LiveMap() {
         if (!isMounted) return
         setLastChecked(new Date())
         if (latestGnn) setGnnRisk(latestGnn)
+        setObjectiveRoutes((prev) => ({ ...prev, [criterion]: latestRoute }))
 
         setRoute((activeRoute) => {
           if (!activeRoute || activeRoute.shipment_id !== latestRoute.shipment_id) {
@@ -264,11 +310,17 @@ function LiveMap() {
   const handleCriterionChange = async (newCriterion) => {
     setCriterion(newCriterion)
     setPendingRecommendation(null)
+    if (objectiveRoutes[newCriterion]) {
+      setRoute(objectiveRoutes[newCriterion])
+      setFeedback(`Active Objective: ${newCriterion.replace('_', ' ').toUpperCase()}`)
+      return
+    }
     if (!shipment?.id) return
     setActionLoading('route')
     setError('')
     try {
       const latestRoute = await getAlternativeRoute(shipment.id, newCriterion)
+      setObjectiveRoutes((prev) => ({ ...prev, [newCriterion]: latestRoute }))
       setRoute(latestRoute)
       setFeedback(`Dijkstra optimal route calculated under ${newCriterion.replace('_', ' ')} criterion`)
     } catch (err) {
@@ -300,9 +352,22 @@ function LiveMap() {
     setActionLoading('route')
     setError('')
     try {
-      const result = await getAlternativeRoute(shipment.id, criterion)
-      setRoute(result)
-      setFeedback(`Dijkstra optimal route calculated under ${criterion.replace('_', ' ')} criterion`)
+      const [distRes, timeRes, riskRes] = await Promise.allSettled([
+        getAlternativeRoute(shipment.id, 'distance'),
+        getAlternativeRoute(shipment.id, 'time'),
+        getAlternativeRoute(shipment.id, 'risk_adjusted'),
+      ])
+      const newObj = {
+        distance: distRes.status === 'fulfilled' ? distRes.value : null,
+        time: timeRes.status === 'fulfilled' ? timeRes.value : null,
+        risk_adjusted: riskRes.status === 'fulfilled' ? riskRes.value : null,
+      }
+      setObjectiveRoutes(newObj)
+      const activeObjRoute = newObj[criterion] || newObj.risk_adjusted || newObj.distance || newObj.time
+      if (activeObjRoute) {
+        setRoute(activeObjRoute)
+      }
+      setFeedback(`Dijkstra multi-objective routes recalculated under ${criterion.replace('_', ' ')} criterion`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -853,30 +918,330 @@ function LiveMap() {
             </div>
           )}
 
-          {/* Route Calculation Result */}
-          {route && (
-            <div className="route-result-card">
-              <div className="route-result-header">
-                <span className="route-title">
-                  <Route size={12} /> {(route.recommended_route || []).join(' → ')}
-                </span>
+          {/* Navigation-Grade Route Details & Alternative Routing Suite */}
+          <div className="route-details-panel">
+            <div className="route-details-header">
+              <div className="details-header-title">
+                <Navigation size={14} className="nav-icon" />
+                <h3>Navigation & Routing Suite</h3>
               </div>
-              <div className="route-stats-grid">
-                <div className="route-stat">
-                  <span>Distance</span>
-                  <strong>{route.total_distance_km ? `${Math.round(route.total_distance_km).toLocaleString()} km` : '—'}</strong>
-                </div>
-                <div className="route-stat">
-                  <span>Time</span>
-                  <strong>{route.total_time_hours ? `${Math.round(route.total_time_hours)}h` : '—'}</strong>
-                </div>
-                <div className="route-stat">
-                  <span>Risk Level</span>
-                  <strong className="green-txt">{route.route_risk_level || 'LOW'}</strong>
-                </div>
-              </div>
+              <span className={`route-obj-badge ${criterion}`}>
+                {criterion === 'distance' ? 'Shortest' : criterion === 'time' ? 'Fastest' : 'Risk-Adjusted'}
+              </span>
             </div>
-          )}
+
+            {/* 1. Three Route Objectives Selector Cards */}
+            <div className="objective-cards-grid">
+              {/* Shortest (Cyan) */}
+              <button
+                type="button"
+                className={`obj-card shortest ${criterion === 'distance' ? 'active' : ''}`}
+                onClick={() => handleCriterionChange('distance')}
+              >
+                <div className="obj-card-top">
+                  <div className="obj-icon-wrap shortest">
+                    <Compass size={13} />
+                  </div>
+                  {criterion === 'distance' && <span className="obj-active-chip">ACTIVE</span>}
+                </div>
+                <div className="obj-card-name">Shortest Route</div>
+                <div className="obj-card-main-stat">
+                  {objectiveRoutes.distance?.total_distance_km
+                    ? `${Math.round(objectiveRoutes.distance.total_distance_km).toLocaleString()} km`
+                    : route?.total_distance_km && criterion === 'distance'
+                    ? `${Math.round(route.total_distance_km).toLocaleString()} km`
+                    : '—'}
+                </div>
+                <div className="obj-card-sub-stat">
+                  {objectiveRoutes.distance?.estimated_time_hours
+                    ? `${Math.round(objectiveRoutes.distance.estimated_time_hours)}h transit`
+                    : 'Min physical distance'}
+                </div>
+              </button>
+
+              {/* Fastest (Amber) */}
+              <button
+                type="button"
+                className={`obj-card fastest ${criterion === 'time' ? 'active' : ''}`}
+                onClick={() => handleCriterionChange('time')}
+              >
+                <div className="obj-card-top">
+                  <div className="obj-icon-wrap fastest">
+                    <Clock size={13} />
+                  </div>
+                  {criterion === 'time' && <span className="obj-active-chip">ACTIVE</span>}
+                </div>
+                <div className="obj-card-name">Fastest Route</div>
+                <div className="obj-card-main-stat">
+                  {objectiveRoutes.time?.estimated_time_hours
+                    ? `${Math.round(objectiveRoutes.time.estimated_time_hours)} hrs`
+                    : route?.estimated_time_hours && criterion === 'time'
+                    ? `${Math.round(route.estimated_time_hours)} hrs`
+                    : '—'}
+                </div>
+                <div className="obj-card-sub-stat">
+                  {objectiveRoutes.time?.total_distance_km
+                    ? `${Math.round(objectiveRoutes.time.total_distance_km).toLocaleString()} km`
+                    : 'Min travel duration'}
+                </div>
+              </button>
+
+              {/* Risk-Adjusted (Emerald) */}
+              <button
+                type="button"
+                className={`obj-card risk-adjusted ${criterion === 'risk_adjusted' ? 'active' : ''}`}
+                onClick={() => handleCriterionChange('risk_adjusted')}
+              >
+                <div className="obj-card-top">
+                  <div className="obj-icon-wrap risk-adjusted">
+                    <Zap size={13} />
+                  </div>
+                  {criterion === 'risk_adjusted' && <span className="obj-active-chip">ACTIVE</span>}
+                </div>
+                <div className="obj-card-name">Risk-Adjusted</div>
+                <div className="obj-card-main-stat">
+                  {objectiveRoutes.risk_adjusted?.average_risk_weight
+                    ? `${objectiveRoutes.risk_adjusted.average_risk_weight.toFixed(2)}x`
+                    : route?.average_risk_weight && criterion === 'risk_adjusted'
+                    ? `${route.average_risk_weight.toFixed(2)}x`
+                    : 'Safe'}
+                </div>
+                <div className="obj-card-sub-stat">
+                  {objectiveRoutes.risk_adjusted?.route_risk_level
+                    ? `${objectiveRoutes.risk_adjusted.route_risk_level} Risk`
+                    : 'Disruption resilient'}
+                </div>
+              </button>
+            </div>
+
+            {/* 2. Active Corridor Breakdown */}
+            {route && (
+              <div className="corridor-summary-box">
+                <div className="corridor-metrics-grid">
+                  <div className="c-metric">
+                    <span className="c-metric-label">Total Distance</span>
+                    <strong className="c-metric-val">
+                      {route.total_distance_km ? `${Math.round(route.total_distance_km).toLocaleString()} km` : '—'}
+                    </strong>
+                  </div>
+                  <div className="c-metric">
+                    <span className="c-metric-label">Est. Travel Time</span>
+                    <strong className="c-metric-val">
+                      {route.total_time_hours || route.estimated_time_hours
+                        ? `${Math.round(route.total_time_hours || route.estimated_time_hours)} hrs`
+                        : '—'}
+                    </strong>
+                  </div>
+                  <div className="c-metric">
+                    <span className="c-metric-label">Corridor Risk</span>
+                    <strong className={`c-metric-val ${route.route_risk_level?.toLowerCase() || 'low'}`}>
+                      {route.average_risk_weight ? `${route.average_risk_weight.toFixed(2)}x` : '1.00x'} ({route.route_risk_level || 'LOW'})
+                    </strong>
+                  </div>
+                  <div className="c-metric">
+                    <span className="c-metric-label">Corridor Waypoints</span>
+                    <strong className="c-metric-val">
+                      {route.recommended_route?.length || 2} Hubs · {route.segments?.length || 1} Segments
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Transport Mode Badges */}
+                {route.transport_modes && route.transport_modes.length > 0 && (
+                  <div className="corridor-modes-row">
+                    <span className="modes-label">Transit Modes:</span>
+                    <div className="modes-badges">
+                      {route.transport_modes.map((m) => (
+                        <span key={m} className={`corridor-mode-pill ${m.toLowerCase()}`}>
+                          {m === 'Ocean' ? <Ship size={11} /> : m === 'Air' ? <Plane size={11} /> : <Truck size={11} />}
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. AI Decision Rationale */}
+            {route && (
+              <div className={`ai-rationale-box ${criterion}`}>
+                <div className="rationale-header">
+                  <Lightbulb size={13} className="rationale-icon" />
+                  <strong>AI Routing Rationale ({criterion.replace('_', ' ').toUpperCase()})</strong>
+                </div>
+                <p className="rationale-text">
+                  {route.decision_reason || route.reason || (
+                    criterion === 'distance'
+                      ? `Calculated using Dijkstra algorithm minimizing cumulative physical distance (${route.total_distance_km ? Math.round(route.total_distance_km) : 0} km). Provides direct trajectory along established highway corridors.`
+                      : criterion === 'time'
+                      ? `Calculated using Dijkstra algorithm minimizing transit time (${route.estimated_time_hours ? Math.round(route.estimated_time_hours) : 0} hrs). Bypasses congested transit links in favor of express connections.`
+                      : `Dynamically evaluated real-time disruptions across the multimodal network. Balances transit duration against operational disruption exposure.`
+                  )}
+                </p>
+                {route.external_disruptions_considered && (
+                  <div className="rationale-disruptions">
+                    <span>Evaluated Disruptions:</span>
+                    <strong>{route.weather_disruption_count || 0} Weather</strong> ·{' '}
+                    <strong>{route.port_disruption_count || 0} Port Congestion</strong> ·{' '}
+                    <strong>{route.traffic_disruption_count || 0} Traffic / Road Incidents</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. Turn-by-Turn Waypoints Stepper */}
+            {route?.recommended_route && route.recommended_route.length >= 2 && (
+              <div className="waypoints-stepper-box">
+                <div className="stepper-header">
+                  <Milestone size={13} />
+                  <span>Turn-by-Turn Corridor Waypoints</span>
+                  <span className="step-count">{route.recommended_route.length} Points</span>
+                </div>
+                <div className="stepper-list">
+                  {route.recommended_route.map((hubName, idx) => {
+                    const isOrigin = idx === 0
+                    const isDest = idx === route.recommended_route.length - 1
+                    const segment = route.segments && route.segments[idx]
+                    return (
+                      <div key={`${hubName}-${idx}`} className="stepper-item">
+                        <div className="stepper-left">
+                          <div className={`stepper-dot ${isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint'}`}>
+                            {idx + 1}
+                          </div>
+                          {!isDest && <div className="stepper-line" />}
+                        </div>
+                        <div className="stepper-content">
+                          <div className="stepper-hub-row">
+                            <strong className="hub-title">{hubName.replace(/_/g, ' ')}</strong>
+                            <span className={`hub-role ${isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint'}`}>
+                              {isOrigin ? 'ORIGIN' : isDest ? 'DESTINATION' : 'WAYPOINT'}
+                            </span>
+                          </div>
+                          {segment && !isDest && (
+                            <div className="stepper-segment-info">
+                              <span className="seg-mode">{segment.mode || 'Corridor'}</span>
+                              <span className="seg-corridor">{segment.corridor_name || `${hubName} → ${route.recommended_route[idx + 1]}`}</span>
+                              {segment.distance_km && <span className="seg-dist">{segment.distance_km} km</span>}
+                              {segment.base_time_hours && <span className="seg-time">{segment.base_time_hours}h</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Multi-Objective Comparison Matrix */}
+            {(objectiveRoutes.distance || objectiveRoutes.time || objectiveRoutes.risk_adjusted) && (
+              <div className="comparison-matrix-box">
+                <div className="matrix-header">
+                  <Layers size={13} />
+                  <span>Alternative Objectives Comparison</span>
+                </div>
+                <div className="matrix-table-wrap">
+                  <table className="comparison-table">
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th className={`col-head shortest ${criterion === 'distance' ? 'active' : ''}`}>
+                          Shortest
+                        </th>
+                        <th className={`col-head fastest ${criterion === 'time' ? 'active' : ''}`}>
+                          Fastest
+                        </th>
+                        <th className={`col-head risk-adjusted ${criterion === 'risk_adjusted' ? 'active' : ''}`}>
+                          Risk-Adjusted
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="metric-name">Distance</td>
+                        <td className={criterion === 'distance' ? 'active-cell' : ''}>
+                          {objectiveRoutes.distance?.total_distance_km ? `${Math.round(objectiveRoutes.distance.total_distance_km).toLocaleString()} km` : '—'}
+                        </td>
+                        <td className={criterion === 'time' ? 'active-cell' : ''}>
+                          {objectiveRoutes.time?.total_distance_km ? `${Math.round(objectiveRoutes.time.total_distance_km).toLocaleString()} km` : '—'}
+                        </td>
+                        <td className={criterion === 'risk_adjusted' ? 'active-cell' : ''}>
+                          {objectiveRoutes.risk_adjusted?.total_distance_km ? `${Math.round(objectiveRoutes.risk_adjusted.total_distance_km).toLocaleString()} km` : '—'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="metric-name">Transit Time</td>
+                        <td className={criterion === 'distance' ? 'active-cell' : ''}>
+                          {objectiveRoutes.distance?.estimated_time_hours ? `${Math.round(objectiveRoutes.distance.estimated_time_hours)} hrs` : '—'}
+                        </td>
+                        <td className={criterion === 'time' ? 'active-cell' : ''}>
+                          {objectiveRoutes.time?.estimated_time_hours ? `${Math.round(objectiveRoutes.time.estimated_time_hours)} hrs` : '—'}
+                        </td>
+                        <td className={criterion === 'risk_adjusted' ? 'active-cell' : ''}>
+                          {objectiveRoutes.risk_adjusted?.estimated_time_hours ? `${Math.round(objectiveRoutes.risk_adjusted.estimated_time_hours)} hrs` : '—'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="metric-name">Risk Index</td>
+                        <td className={criterion === 'distance' ? 'active-cell' : ''}>
+                          {objectiveRoutes.distance?.average_risk_weight ? `${objectiveRoutes.distance.average_risk_weight.toFixed(2)}x` : '1.00x'}
+                        </td>
+                        <td className={criterion === 'time' ? 'active-cell' : ''}>
+                          {objectiveRoutes.time?.average_risk_weight ? `${objectiveRoutes.time.average_risk_weight.toFixed(2)}x` : '1.00x'}
+                        </td>
+                        <td className={criterion === 'risk_adjusted' ? 'active-cell' : ''}>
+                          <span className="best-risk">{objectiveRoutes.risk_adjusted?.average_risk_weight ? `${objectiveRoutes.risk_adjusted.average_risk_weight.toFixed(2)}x` : 'Safe'}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="metric-name">Action</td>
+                        <td>
+                          {criterion === 'distance' ? (
+                            <span className="matrix-active-badge shortest">Active</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="matrix-switch-btn shortest"
+                              onClick={() => handleCriterionChange('distance')}
+                            >
+                              Select
+                            </button>
+                          )}
+                        </td>
+                        <td>
+                          {criterion === 'time' ? (
+                            <span className="matrix-active-badge fastest">Active</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="matrix-switch-btn fastest"
+                              onClick={() => handleCriterionChange('time')}
+                            >
+                              Select
+                            </button>
+                          )}
+                        </td>
+                        <td>
+                          {criterion === 'risk_adjusted' ? (
+                            <span className="matrix-active-badge risk-adjusted">Active</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="matrix-switch-btn risk-adjusted"
+                              onClick={() => handleCriterionChange('risk_adjusted')}
+                            >
+                              Select
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </aside>
       </section>
     </div>

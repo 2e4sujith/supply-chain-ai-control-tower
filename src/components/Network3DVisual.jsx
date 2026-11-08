@@ -64,10 +64,18 @@ const NETWORK_EDGES_3D = [
   [23, 24], [23, 25], [25, 26], [23, 31], [31, 30], [30, 27], [27, 28], [28, 32], [28, 29], [27, 31], [24, 30],
 ]
 
+// Compute node degrees across the 3D topology
+const NODE_DEGREES_3D = new Array(NETWORK_NODES_3D.length).fill(0)
+NETWORK_EDGES_3D.forEach(([u, v]) => {
+  if (u < NODE_DEGREES_3D.length) NODE_DEGREES_3D[u]++
+  if (v < NODE_DEGREES_3D.length) NODE_DEGREES_3D[v]++
+})
+
 export default function Network3DVisual() {
   const canvasRef = useRef(null)
-  const [hoveredNode, setHoveredNode] = useState(null)
   const [isRotating, setIsRotating] = useState(true)
+  const hoveredIndexRef = useRef(null)
+  const projectedNodesRef = useRef([])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -111,6 +119,20 @@ export default function Network3DVisual() {
         targetAngleY += dx * 0.008
         targetAngleX += dy * 0.008
         targetAngleX = Math.max(-0.9, Math.min(0.9, targetAngleX))
+      } else {
+        const rect = canvas.getBoundingClientRect()
+        const mx = e.clientX - rect.left
+        const my = e.clientY - rect.top
+        let found = null
+        for (const node of projectedNodesRef.current) {
+          const dist = Math.hypot(node.px - mx, node.py - my)
+          if (dist < Math.max(9, node.radius * node.scale + 8)) {
+            found = node
+            break
+          }
+        }
+        hoveredIndexRef.current = found ? found.index : null
+        canvas.style.cursor = found ? 'pointer' : 'grab'
       }
     }
 
@@ -171,6 +193,8 @@ export default function Network3DVisual() {
         }
       })
 
+      projectedNodesRef.current = projectedNodes
+
       // Sort edges and nodes by depth for correct 3D perspective occluding
       // 1. Draw 3D Corridor Edges with gradient depth
       NETWORK_EDGES_3D.forEach(([i1, i2]) => {
@@ -179,19 +203,26 @@ export default function Network3DVisual() {
         if (!p1 || !p2) return
 
         const avgDepth = (p1.zDepth + p2.zDepth) / 2
-        // Closer nodes = brighter, farther nodes = subtle
+        const isHoverConnected =
+          hoveredIndexRef.current !== null &&
+          (i1 === hoveredIndexRef.current || i2 === hoveredIndexRef.current)
+
         const alpha = Math.max(0.12, Math.min(0.65, 0.4 - avgDepth * 0.002))
 
         ctx.beginPath()
         ctx.moveTo(p1.px, p1.py)
         ctx.lineTo(p2.px, p2.py)
 
-        // Color based on region connectivity
-        const isIndiaCorridor = p1.group === 'india' || p2.group === 'india'
-        ctx.strokeStyle = isIndiaCorridor
-          ? `rgba(56, 189, 248, ${alpha * 1.3})`
-          : `rgba(99, 102, 241, ${alpha})`
-        ctx.lineWidth = Math.max(1, 1.8 * ((p1.scale + p2.scale) / 2))
+        if (isHoverConnected) {
+          ctx.strokeStyle = '#38bdf8'
+          ctx.lineWidth = 2.4
+        } else {
+          const isIndiaCorridor = p1.group === 'india' || p2.group === 'india'
+          ctx.strokeStyle = isIndiaCorridor
+            ? `rgba(56, 189, 248, ${alpha * 1.3})`
+            : `rgba(99, 102, 241, ${alpha})`
+          ctx.lineWidth = Math.max(1, 1.8 * ((p1.scale + p2.scale) / 2))
+        }
         ctx.stroke()
       })
 
@@ -199,22 +230,30 @@ export default function Network3DVisual() {
       const sortedNodes = [...projectedNodes].sort((a, b) => b.zDepth - a.zDepth)
 
       sortedNodes.forEach((node) => {
-        const nodeRadius = Math.max(2.5, node.radius * node.scale)
+        const isHovered = hoveredIndexRef.current === node.index
+        const nodeRadius = Math.max(2.5, (node.radius * (isHovered ? 1.4 : 1.0)) * node.scale)
         const depthAlpha = Math.max(0.35, Math.min(1.0, 0.8 - node.zDepth * 0.003))
 
-        // Pulse wave effect for key hubs
-        if (node.group === 'india' || node.name === 'Shanghai' || node.name === 'Rotterdam' || node.name === 'Los Angeles') {
-          const pulseR = nodeRadius + (Math.sin(pulseTime + node.index) + 1) * 3
+        // Pulse wave effect for key hubs or hovered hub
+        if (isHovered || node.group === 'india' || node.name === 'Shanghai' || node.name === 'Rotterdam' || node.name === 'Los Angeles') {
+          const pulseR = nodeRadius + (Math.sin(pulseTime + node.index) + 1) * (isHovered ? 4.5 : 3)
           ctx.beginPath()
           ctx.arc(node.px, node.py, pulseR, 0, Math.PI * 2)
-          ctx.strokeStyle = node.group === 'india' ? `rgba(16, 185, 129, 0.25)` : `rgba(56, 189, 248, 0.2)`
-          ctx.lineWidth = 1
+          ctx.strokeStyle = isHovered
+            ? 'rgba(56, 189, 248, 0.7)'
+            : node.group === 'india'
+            ? 'rgba(16, 185, 129, 0.25)'
+            : 'rgba(56, 189, 248, 0.2)'
+          ctx.lineWidth = isHovered ? 1.5 : 1
           ctx.stroke()
         }
 
         // Outer glow
-        const glow = ctx.createRadialGradient(node.px, node.py, 0, node.px, node.py, nodeRadius * 2.2)
-        if (node.group === 'india') {
+        const glow = ctx.createRadialGradient(node.px, node.py, 0, node.px, node.py, nodeRadius * 2.5)
+        if (isHovered) {
+          glow.addColorStop(0, 'rgba(56, 189, 248, 0.95)')
+          glow.addColorStop(1, 'rgba(56, 189, 248, 0)')
+        } else if (node.group === 'india') {
           glow.addColorStop(0, `rgba(16, 185, 129, ${depthAlpha * 0.9})`)
           glow.addColorStop(1, 'rgba(16, 185, 129, 0)')
         } else if (node.group === 'europe') {
@@ -230,23 +269,64 @@ export default function Network3DVisual() {
 
         ctx.fillStyle = glow
         ctx.beginPath()
-        ctx.arc(node.px, node.py, nodeRadius * 2.2, 0, Math.PI * 2)
+        ctx.arc(node.px, node.py, nodeRadius * 2.5, 0, Math.PI * 2)
         ctx.fill()
 
         // Inner solid core
         ctx.beginPath()
         ctx.arc(node.px, node.py, nodeRadius, 0, Math.PI * 2)
-        ctx.fillStyle = node.group === 'india' ? '#34d399' : node.group === 'europe' ? '#c084fc' : node.group === 'na' ? '#fbbf24' : '#38bdf8'
+        ctx.fillStyle = isHovered
+          ? '#ffffff'
+          : node.group === 'india'
+          ? '#34d399'
+          : node.group === 'europe'
+          ? '#c084fc'
+          : node.group === 'na'
+          ? '#fbbf24'
+          : '#38bdf8'
         ctx.fill()
         ctx.strokeStyle = '#ffffff'
         ctx.lineWidth = 1
         ctx.stroke()
 
-        // Label on larger/front nodes
-        if (node.zDepth < 20) {
+        // Label on larger/front nodes or when hovered
+        if (isHovered || node.zDepth < 20) {
+          ctx.font = isHovered ? 'bold 10px "JetBrains Mono", monospace' : '9px "JetBrains Mono", monospace'
+          ctx.fillStyle = isHovered ? '#ffffff' : `rgba(226, 232, 240, ${depthAlpha})`
+          ctx.fillText(node.name, node.px + nodeRadius + 5, node.py + 3)
+        }
+
+        // Floating HUD card on hovered node
+        if (isHovered) {
+          const hudW = 150
+          const hudH = 46
+          const hudX = Math.min(width - hudW - 12, node.px + nodeRadius + 14)
+          const hudY = Math.max(12, Math.min(height - hudH - 12, node.py - hudH / 2))
+
+          ctx.fillStyle = 'rgba(16, 23, 38, 0.94)'
+          ctx.strokeStyle = '#38bdf8'
+          ctx.lineWidth = 1.2
+          ctx.beginPath()
+          if (ctx.roundRect) {
+            ctx.roundRect(hudX, hudY, hudW, hudH, 6)
+          } else {
+            ctx.rect(hudX, hudY, hudW, hudH)
+          }
+          ctx.fill()
+          ctx.stroke()
+
+          ctx.font = 'bold 11px "JetBrains Mono", monospace'
+          ctx.fillStyle = '#ffffff'
+          ctx.fillText(node.name, hudX + 8, hudY + 16)
+
+          const reg = node.group === 'india' ? 'India Regional Gateway' : node.group === 'europe' ? 'European Intermodal' : node.group === 'na' ? 'North America Trunk' : 'Asia-Pacific Direct'
+          ctx.font = '9px system-ui, sans-serif'
+          ctx.fillStyle = '#94a3b8'
+          ctx.fillText(reg, hudX + 8, hudY + 28)
+
           ctx.font = '9px "JetBrains Mono", monospace'
-          ctx.fillStyle = `rgba(226, 232, 240, ${depthAlpha})`
-          ctx.fillText(node.name, node.px + nodeRadius + 4, node.py + 3)
+          ctx.fillStyle = '#34d399'
+          ctx.fillText(`${NODE_DEGREES_3D[node.index]} Connected Corridors`, hudX + 8, hudY + 40)
         }
       })
 

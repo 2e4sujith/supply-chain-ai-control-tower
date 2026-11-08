@@ -51,6 +51,33 @@
   font-weight: 700;
   color: #ffffff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.map-badge.shortest {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+
+.map-badge.fastest {
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.25);
+}
+
+.map-badge.risk-adjusted {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.map-badge-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.map-badge-metric {
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
 }
 
 .map-live-dot {
@@ -373,6 +400,21 @@
 
 .ct-route-tooltip.optimal {
   border-color: #10b981 !important;
+  color: #34d399 !important;
+}
+
+.ct-route-tooltip.shortest {
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+.ct-route-tooltip.fastest {
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+}
+
+.ct-route-tooltip.risk-adjusted {
+  border-color: #34d399 !important;
   color: #34d399 !important;
 }
 

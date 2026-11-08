@@ -214,7 +214,7 @@
 /* 2-Column Workspace Grid */
 .map-workspace {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 390px;
   gap: 20px;
   align-items: start;
 }
@@ -448,49 +448,535 @@
   color: #ffffff;
 }
 
-/* Route Result Card */
-.route-result-card {
-  background: #162032;
-  border: 1px solid #10b981;
-  border-radius: 6px;
-  padding: 12px 14px;
+/* Navigation-Grade Route Details & Alternative Routing Suite */
+.route-details-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.route-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #34d399;
+.route-details-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #223048;
 }
 
-.route-stats-grid {
+.details-header-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #38bdf8;
+}
+
+.details-header-title h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.route-obj-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.route-obj-badge.distance {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.route-obj-badge.time {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.route-obj-badge.risk_adjusted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* 1. Objective Cards Grid */
+.objective-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-.route-stat {
+.obj-card {
+  background: #162032;
+  border: 1px solid #223048;
+  border-radius: 8px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.route-stat span {
+.obj-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.obj-card.shortest:hover,
+.obj-card.shortest.active {
+  border-color: #38bdf8;
+  background: rgba(14, 165, 233, 0.12);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+.obj-card.fastest:hover,
+.obj-card.fastest.active {
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+}
+
+.obj-card.risk-adjusted:hover,
+.obj-card.risk-adjusted.active {
+  border-color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+}
+
+.obj-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.obj-icon-wrap {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.obj-icon-wrap.shortest {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.obj-icon-wrap.fastest {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.obj-icon-wrap.risk-adjusted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.obj-active-chip {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #0b1120;
+}
+
+.obj-card-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.obj-card-main-stat {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.obj-card.shortest .obj-card-main-stat { color: #38bdf8; }
+.obj-card.fastest .obj-card-main-stat { color: #fbbf24; }
+.obj-card.risk-adjusted .obj-card-main-stat { color: #34d399; }
+
+.obj-card-sub-stat {
   font-size: 9px;
   color: #8493a8;
-  text-transform: uppercase;
+  line-height: 1.2;
 }
 
-.route-stat strong {
-  font-size: 11px;
+/* 2. Corridor Summary Box */
+.corridor-summary-box {
+  background: #162032;
+  border: 1px solid #223048;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.corridor-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.c-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.c-metric-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #8493a8;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.c-metric-val {
+  font-size: 13px;
+  font-weight: 800;
   font-family: 'JetBrains Mono', monospace;
   color: #ffffff;
 }
 
-.green-txt { color: #34d399 !important; }
+.c-metric-val.critical { color: #f87171; }
+.c-metric-val.high { color: #fb923c; }
+.c-metric-val.medium { color: #facc15; }
+.c-metric-val.low { color: #34d399; }
+
+.corridor-modes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modes-label {
+  font-size: 10px;
+  color: #8493a8;
+  font-weight: 600;
+}
+
+.modes-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.corridor-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(34, 48, 72, 0.6);
+  border: 1px solid #223048;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.corridor-mode-pill.road { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
+.corridor-mode-pill.rail { color: #a78bfa; border-color: rgba(167, 139, 250, 0.3); }
+.corridor-mode-pill.ocean { color: #34d399; border-color: rgba(52, 211, 153, 0.3); }
+.corridor-mode-pill.air { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+
+/* 3. AI Routing Decision Rationale */
+.ai-rationale-box {
+  background: #141d2e;
+  border: 1px solid #223048;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-rationale-box.distance { border-left: 3px solid #38bdf8; }
+.ai-rationale-box.time { border-left: 3px solid #fbbf24; }
+.ai-rationale-box.risk_adjusted { border-left: 3px solid #34d399; }
+
+.rationale-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.rationale-icon {
+  color: #fbbf24;
+}
+
+.rationale-text {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.rationale-disruptions {
+  font-size: 10px;
+  color: #64748b;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rationale-disruptions strong {
+  color: #cbd5e1;
+}
+
+/* 4. Turn-by-Turn Waypoints Stepper */
+.waypoints-stepper-box {
+  background: #162032;
+  border: 1px solid #223048;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stepper-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.step-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.stepper-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepper-item {
+  display: flex;
+  gap: 10px;
+}
+
+.stepper-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 18px;
+}
+
+.stepper-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  z-index: 2;
+}
+
+.stepper-dot.origin { background: #3b82f6; color: #ffffff; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+.stepper-dot.dest { background: #10b981; color: #ffffff; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+.stepper-dot.waypoint { background: #223048; color: #94a3b8; border: 1px solid #334155; }
+
+.stepper-line {
+  width: 2px;
+  flex-grow: 1;
+  min-height: 22px;
+  background: #223048;
+  margin: 2px 0;
+}
+
+.stepper-content {
+  flex-grow: 1;
+  padding-bottom: 10px;
+}
+
+.stepper-hub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hub-title {
+  font-size: 12px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.hub-role {
+  font-size: 8px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.hub-role.origin { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.hub-role.dest { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.hub-role.waypoint { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+
+.stepper-segment-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.seg-mode {
+  background: #1e293b;
+  color: #38bdf8;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.seg-corridor {
+  color: #94a3b8;
+}
+
+.seg-dist, .seg-time {
+  font-family: 'JetBrains Mono', monospace;
+  color: #cbd5e1;
+}
+
+/* 5. Alternative Multi-Objective Comparison Matrix */
+.comparison-matrix-box {
+  background: #162032;
+  border: 1px solid #223048;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.matrix-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.matrix-table-wrap {
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.comparison-table th {
+  padding: 6px 6px;
+  text-align: left;
+  border-bottom: 1px solid #223048;
+  font-weight: 700;
+  color: #8493a8;
+}
+
+.comparison-table th.col-head.shortest { color: #38bdf8; }
+.comparison-table th.col-head.fastest { color: #fbbf24; }
+.comparison-table th.col-head.risk-adjusted { color: #34d399; }
+
+.comparison-table th.active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.comparison-table td {
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(34, 48, 72, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  color: #94a3b8;
+}
+
+.comparison-table td.metric-name {
+  font-family: inherit;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.comparison-table td.active-cell {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.best-risk {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.matrix-active-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.matrix-active-badge.shortest { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+.matrix-active-badge.fastest { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }
+.matrix-active-badge.risk-adjusted { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+.matrix-switch-btn {
+  background: transparent;
+  border: 1px solid #223048;
+  color: #8493a8;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.matrix-switch-btn:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.matrix-switch-btn.shortest:hover { border-color: #38bdf8; color: #38bdf8; }
+.matrix-switch-btn.fastest:hover { border-color: #fbbf24; color: #fbbf24; }
+.matrix-switch-btn.risk-adjusted:hover { border-color: #34d399; color: #34d399; }
 
 /* What-If Drawer */
 .what-if-drawer {

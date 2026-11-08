@@ -3,11 +3,17 @@
   display: flex;
   flex-direction: column;
   background: radial-gradient(circle at 50% 30%, #0d1728 0%, #080c14 90%);
-  border: 1px solid var(--border-card);
+  border: 1px solid rgba(56, 189, 248, 0.22);
   border-radius: var(--radius-md);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 40px rgba(56, 189, 248, 0.08);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.supply-chain-globe-wrapper:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 50px rgba(56, 189, 248, 0.12);
 }
 
 .supply-chain-globe-wrapper.compact {

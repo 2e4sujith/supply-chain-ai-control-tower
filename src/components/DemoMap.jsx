@@ -335,6 +335,48 @@ function fitMapToRoute(map, coords, animate = true) {
   })
 }
 
+/**
+ * Returns distinct visual styling, colors, and labels for the 3 Route Objectives
+ */
+export function getRouteStyling(criterion) {
+  switch (criterion) {
+    case 'distance':
+      return {
+        lineColor: '#0284c7',
+        glowColor: '#38bdf8',
+        arrowFill: '#38bdf8',
+        arrowStroke: '#075985',
+        title: 'Shortest Distance Route (Dijkstra Min-km)',
+        badgeClass: 'shortest',
+        objectiveLabel: 'Shortest Route',
+        colorHex: '#0284c7',
+      }
+    case 'time':
+      return {
+        lineColor: '#d97706',
+        glowColor: '#fbbf24',
+        arrowFill: '#fbbf24',
+        arrowStroke: '#78350f',
+        title: 'Fastest Transit Route (Dijkstra Min-hrs)',
+        badgeClass: 'fastest',
+        objectiveLabel: 'Fastest Route',
+        colorHex: '#d97706',
+      }
+    case 'risk_adjusted':
+    default:
+      return {
+        lineColor: '#059669',
+        glowColor: '#10b981',
+        arrowFill: '#34d399',
+        arrowStroke: '#064e3b',
+        title: 'Risk-Adjusted Resilient Route (Safest Corridor)',
+        badgeClass: 'risk-adjusted',
+        objectiveLabel: 'Risk-Adjusted Route',
+        colorHex: '#059669',
+      }
+  }
+}
+
 function DemoMap({
   shipment,
   allShipments = [],
@@ -356,6 +398,7 @@ function DemoMap({
   const [isRoadLoading, setIsRoadLoading] = useState(false)
   const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
   const [resolvedNodeMap, setResolvedNodeMap] = useState({})
+  const routeStyle = useMemo(() => getRouteStyling(criterion), [criterion])
 
   // 1. Raw Node Names for paths
   const rawRecommendedNames = useMemo(() => {
@@ -746,24 +789,24 @@ function DemoMap({
         // Single Optimal Route
         if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
           const singleGlow = L.polyline(currentPolylinePoints, {
-            color: '#10b981',
-            weight: 8,
-            opacity: 0.22,
+            color: routeStyle.glowColor,
+            weight: 9,
+            opacity: 0.28,
             lineCap: 'round',
             lineJoin: 'round',
           })
           group.addLayer(singleGlow)
 
           const singleLine = L.polyline(currentPolylinePoints, {
-            color: '#059669',
-            weight: 4.5,
-            opacity: 0.95,
+            color: routeStyle.lineColor,
+            weight: 5.2,
+            opacity: 0.98,
             lineCap: 'round',
             lineJoin: 'round',
           })
           singleLine.bindTooltip(
-            `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'OPTIMAL'}`,
-            { sticky: true, className: 'ct-route-tooltip optimal' }
+            `${routeStyle.title} · ${route?.total_distance_km ? `${Math.round(route.total_distance_km).toLocaleString()} km` : ''} ${route?.estimated_time_hours ? `· ${Math.round(route.estimated_time_hours)} hrs` : ''}`,
+            { sticky: true, className: `ct-route-tooltip ${routeStyle.badgeClass}` }
           )
           group.addLayer(singleLine)
         }
@@ -778,34 +821,34 @@ function DemoMap({
             lineCap: 'round',
             lineJoin: 'round',
           })
-          baselineLine.bindTooltip('Alternative Route (Baseline Corridor)', {
+          baselineLine.bindTooltip('Alternative Baseline Corridor', {
             sticky: true,
             className: 'ct-route-tooltip',
           })
           group.addLayer(baselineLine)
         }
 
-        // Optimal Dijkstra Recommended Route (Dominant vibrant emerald line)
+        // Selected Objective Route (Dominant vibrant line in criterion color)
         if (recPolylinePoints && recPolylinePoints.length >= 2) {
           const recGlow = L.polyline(recPolylinePoints, {
-            color: '#10b981',
-            weight: 8,
-            opacity: 0.25,
+            color: routeStyle.glowColor,
+            weight: 9.5,
+            opacity: 0.32,
             lineCap: 'round',
             lineJoin: 'round',
           })
           group.addLayer(recGlow)
 
           const recLine = L.polyline(recPolylinePoints, {
-            color: '#059669',
-            weight: 5,
+            color: routeStyle.lineColor,
+            weight: 5.5,
             opacity: 0.98,
             lineCap: 'round',
             lineJoin: 'round',
           })
           recLine.bindTooltip(
-            `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'DIJKSTRA RECOMMENDED'}`,
-            { sticky: true, className: 'ct-route-tooltip optimal' }
+            `★ ${routeStyle.title} · ${route?.total_distance_km ? `${Math.round(route.total_distance_km).toLocaleString()} km` : ''} ${route?.estimated_time_hours ? `· ${Math.round(route.estimated_time_hours)} hrs` : ''}`,
+            { sticky: true, className: `ct-route-tooltip ${routeStyle.badgeClass} optimal` }
           )
           group.addLayer(recLine)
         }
@@ -827,7 +870,7 @@ function DemoMap({
               html: `
                 <div class="route-arrow-wrapper" style="transform: rotate(${brng}deg);">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="#34d399" stroke="#064e3b" stroke-width="1.5"/>
+                    <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="${routeStyle.arrowFill}" stroke="${routeStyle.arrowStroke}" stroke-width="1.5"/>
                   </svg>
                 </div>
               `,
@@ -1056,14 +1099,27 @@ function DemoMap({
       <div ref={mapContainerRef} className="leaflet-map-canvas" />
 
       {/* Top Left Status Badge */}
-      <div className="map-badge">
-        <span className="map-live-dot" />
-        {route?.algorithm ? 'NETWORKX DIJKSTRA MAP' : 'LIVE ROUTE VIEW'}
-        {criterion && (
-          <span className="criterion-indicator">
-            · {criterion.replace('_', ' ').toUpperCase()}
+      <div className={`map-badge ${routeStyle.badgeClass || ''}`}>
+        <span
+          className="map-live-dot"
+          style={{
+            background: routeStyle.glowColor || '#10b981',
+            boxShadow: `0 0 8px ${routeStyle.glowColor || '#10b981'}`,
+          }}
+        />
+        <span className="map-badge-title">
+          {routeStyle.objectiveLabel || (route?.algorithm ? 'NETWORKX DIJKSTRA MAP' : 'LIVE ROUTE VIEW')}
+        </span>
+        {route?.total_distance_km ? (
+          <span className="map-badge-metric">
+            · {Math.round(route.total_distance_km).toLocaleString()} km
           </span>
-        )}
+        ) : null}
+        {(route?.total_time_hours || route?.estimated_time_hours) ? (
+          <span className="map-badge-metric">
+            · {Math.round(route.total_time_hours || route.estimated_time_hours)} hrs
+          </span>
+        ) : null}
         {isRoadLoading ? (
           <span className="map-geo-status loading">
             <Loader2 size={10} className="loading-spin" /> Road Geometry
@@ -1182,11 +1238,18 @@ function DemoMap({
       {/* Map Legend */}
       <div className="map-legend">
         <span>
-          <i className="legend-current" /> Optimal Route
+          <i
+            className="legend-current"
+            style={{
+              background: routeStyle.lineColor,
+              boxShadow: `0 0 8px ${routeStyle.glowColor}`,
+            }}
+          />{' '}
+          {routeStyle.objectiveLabel}
         </span>
         {!isIdenticalRoute && (
           <span>
-            <i className="legend-alt" /> Alternative Route
+            <i className="legend-alt" /> Baseline Corridor
           </span>
         )}
         <span>

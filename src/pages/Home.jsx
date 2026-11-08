@@ -219,7 +219,7 @@ function Home() {
           <SupplyChainGlobe
             shipments={shipments}
             onSelectShipment={(id) => navigate(`/shipments/${id}`)}
-            height="490px"
+            height="520px"
             title="Global Multimodal Digital Twin"
             subtitle="Real-time 3D planetary tracking of maritime, rail, and highway freight corridors"
           />
