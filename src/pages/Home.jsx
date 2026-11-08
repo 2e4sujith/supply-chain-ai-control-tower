@@ -20,7 +20,7 @@ import {
   Truck,
   Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getAlerts,
@@ -30,6 +30,8 @@ import {
   getShipments,
   wsService,
 } from '../services/api.js'
+import SceneFallback from '../components/three/SceneFallback.jsx'
+const SupplyChainGlobe = lazy(() => import('../components/three/SupplyChainGlobe.jsx'))
 import './Home.css'
 
 function Home() {
@@ -209,6 +211,19 @@ function Home() {
             </span>
           </article>
         ))}
+      </section>
+
+      {/* Flagship 3D Logistics Digital Twin Section */}
+      <section className="dashboard-globe-section" aria-label="3D Logistics Digital Twin">
+        <Suspense fallback={<SceneFallback message="Initialising 3D Planetary Logistics Engine..." />}>
+          <SupplyChainGlobe
+            shipments={shipments}
+            onSelectShipment={(id) => navigate(`/shipments/${id}`)}
+            height="490px"
+            title="Global Multimodal Digital Twin"
+            subtitle="Real-time 3D planetary tracking of maritime, rail, and highway freight corridors"
+          />
+        </Suspense>
       </section>
 
       {/* Main Split: Shipment Risk Overview (Left) & Infrastructure Status (Right) */}

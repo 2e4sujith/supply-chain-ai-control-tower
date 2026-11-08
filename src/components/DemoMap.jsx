@@ -11,6 +11,8 @@ import {
   ZoomIn,
   ZoomOut,
   LocateFixed,
+  Crosshair,
+  Layers,
   AlertCircle,
   Loader2,
   Zap,
@@ -23,6 +25,38 @@ import {
 
 // In-memory global cache for OSRM road geometry segments
 const osrmGeometryCache = new Map()
+
+/**
+ * Validate geographic coordinate bounds and detect swapped values
+ */
+export function validateCoordinate(lat, lon, label = 'Point') {
+  if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+    return { valid: false, lat: null, lon: null, error: `${label}: Missing or invalid coordinate` }
+  }
+  // Detect swapped coordinates (latitude out of [-90, 90] but longitude within [-90, 90])
+  if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
+    console.warn(`[DemoMap] Swapped coordinates detected for ${label}: (${lat}, ${lon}). Auto-correcting to (${lon}, ${lat}).`)
+    return { valid: true, lat: lon, lon: lat, swapped: true }
+  }
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return { valid: false, lat: null, lon: null, error: `${label}: Coordinate out of bounds (${lat}, ${lon})` }
+  }
+  return { valid: true, lat, lon }
+}
+
+/**
+ * Calculate compass bearing between two geographic points (in degrees 0..360)
+ */
+export function calculateBearing(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => (d * Math.PI) / 180
+  const toDeg = (r) => (r * 180) / Math.PI
+  const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2))
+  const x =
+    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
+  const brng = toDeg(Math.atan2(y, x))
+  return (brng + 360) % 360
+}
 
 // Key-free OpenStreetMap & CARTO Basemap Tile URLs
 const TILE_PROVIDERS = {
@@ -287,6 +321,8 @@ function fitMapToRoute(map, coords, animate = true) {
 
 function DemoMap({
   shipment,
+  allShipments = [],
+  onSelectShipment,
   route,
   criterion,
   alternativeRoute,
@@ -300,6 +336,7 @@ function DemoMap({
   const lastFitKeyRef = useRef('')
   const [currentZoom, setCurrentZoom] = useState(4)
   const [mapStyle, setMapStyle] = useState('osm')
+  const [showAllShipments, setShowAllShipments] = useState(true)
   const [isRoadLoading, setIsRoadLoading] = useState(false)
   const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
   const [resolvedNodeMap, setResolvedNodeMap] = useState({})
@@ -623,6 +660,16 @@ function DemoMap({
     }
   }, [geometryPoints, origCoord, destCoord, currentNodesWithCoords])
 
+  // User explicitly clicks Center / Fit on Active Live Shipment
+  const handleFitShipment = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+    const liveLoc = currentLocationObj || getNodeCoord(shipment?.currentLocation) || origCoord
+    if (liveLoc && typeof liveLoc.lat === 'number') {
+      map.flyTo([liveLoc.lat, liveLoc.lon], 9, { animate: true, duration: 0.8 })
+    }
+  }, [currentLocationObj, getNodeCoord, shipment?.currentLocation, origCoord])
+
   // Update Map Layers (Polylines, Markers, Radar Pulse)
   useEffect(() => {
     const map = mapInstanceRef.current
@@ -707,6 +754,35 @@ function DemoMap({
       }
     }
 
+    // 1b. Draw Direction Indicators along Route Polylines (Origin -> Destination)
+    const activeRoutePts = (recPolylinePoints && recPolylinePoints.length >= 2)
+      ? recPolylinePoints
+      : currentPolylinePoints
+    if (activeRoutePts && activeRoutePts.length >= 4) {
+      const arrowStep = Math.max(4, Math.floor(activeRoutePts.length / 6))
+      for (let i = Math.floor(arrowStep / 2); i < activeRoutePts.length - 1; i += arrowStep) {
+        const p1 = activeRoutePts[i]
+        const p2 = activeRoutePts[i + 1]
+        if (p1 && p2 && p1.length >= 2 && p2.length >= 2) {
+          const brng = calculateBearing(p1[0], p1[1], p2[0], p2[1])
+          const arrowIcon = L.divIcon({
+            className: 'ct-route-arrow-marker',
+            html: `
+              <div class="route-arrow-wrapper" style="transform: rotate(${brng}deg);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="#34d399" stroke="#064e3b" stroke-width="1.5"/>
+                </svg>
+              </div>
+            `,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6],
+          })
+          const arrowMarker = L.marker([p1[0], p1[1]], { icon: arrowIcon, interactive: false })
+          group.addLayer(arrowMarker)
+        }
+      }
+    }
+
     // 2. Place Clean Professional Markers
     const totalNodes = displayedNodeItems.length
 
@@ -714,7 +790,12 @@ function DemoMap({
       const coord = item.coord
       if (!coord || typeof coord.lat !== 'number') return
 
-      validCoords.push(coord)
+      const val = validateCoordinate(coord.lat, coord.lon, item.name)
+      if (!val.valid) return
+
+      const finalLat = val.lat
+      const finalLon = val.lon
+      validCoords.push({ lat: finalLat, lon: finalLon })
 
       const isOrigin = idx === 0
       const isDestination = idx === totalNodes - 1
@@ -756,7 +837,7 @@ function DemoMap({
         popupAnchor: [0, -28],
       })
 
-      const marker = L.marker([coord.lat, coord.lon], { icon: customIcon })
+      const marker = L.marker([finalLat, finalLon], { icon: customIcon })
 
       const fullAddr = coord.fullAddress || `${coord.city || item.name}, ${coord.state || ''} ${coord.country || ''}`.trim()
       const popupHtml = `
@@ -773,7 +854,7 @@ function DemoMap({
           <div class="popup-details">
             ${coord.city ? `<div><strong>City:</strong> ${coord.city}</div>` : ''}
             ${coord.state ? `<div><strong>State/Region:</strong> ${coord.state}</div>` : ''}
-            <div><strong>GPS:</strong> ${coord.lat.toFixed(4)}°N, ${Math.abs(coord.lon).toFixed(4)}°${coord.lon >= 0 ? 'E' : 'W'}</div>
+            <div><strong>GPS:</strong> ${finalLat.toFixed(4)}°N, ${Math.abs(finalLon).toFixed(4)}°${finalLon >= 0 ? 'E' : 'W'}</div>
             <div class="popup-role-badge ${isOrigin ? 'org' : isDestination ? 'dst' : 'mid'}">
               ${isOrigin ? '🟢 Shipment Origin' : isDestination ? '🔵 Delivery Destination' : '⚪ Transit Waypoint'}
             </div>
@@ -791,54 +872,95 @@ function DemoMap({
     })
 
     // 3. Active Live Shipment Position Pulse Marker
-    const liveLocObj = currentLocationObj || getNodeCoord(shipment?.currentLocation)
-    if (liveLocObj && liveLocObj.lat && shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('delivered')) {
-      validCoords.push(liveLocObj)
+    const rawLiveLoc = currentLocationObj || getNodeCoord(shipment?.currentLocation)
+    if (rawLiveLoc && typeof rawLiveLoc.lat === 'number' && shipment?.currentLocation && !shipment.currentLocation.toLowerCase().includes('delivered')) {
+      const valLive = validateCoordinate(rawLiveLoc.lat, rawLiveLoc.lon, shipment.id)
+      if (valLive.valid) {
+        validCoords.push({ lat: valLive.lat, lon: valLive.lon })
 
-      const shipIcon = L.divIcon({
-        className: 'ct-shipment-radar-marker',
-        html: `
-          <div class="shipment-radar-pulse">
-            <div class="radar-wave"></div>
-            <div class="radar-core">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 17l10-10 10 10M12 7v10"/></svg>
+        const shipIcon = L.divIcon({
+          className: 'ct-shipment-radar-marker',
+          html: `
+            <div class="shipment-radar-pulse">
+              <div class="radar-wave"></div>
+              <div class="radar-core">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 17l10-10 10 10M12 7v10"/></svg>
+              </div>
+              <span class="radar-label">${shipment.id}</span>
             </div>
-            <span class="radar-label">${shipment.id}</span>
-          </div>
-        `,
-        iconSize: [110, 32],
-        iconAnchor: [55, 16],
-      })
+          `,
+          iconSize: [110, 32],
+          iconAnchor: [55, 16],
+        })
 
-      const liveShipmentMarker = L.marker([liveLocObj.lat, liveLocObj.lon], {
-        icon: shipIcon,
-        zIndexOffset: 1000,
-      })
+        const liveShipmentMarker = L.marker([valLive.lat, valLive.lon], {
+          icon: shipIcon,
+          zIndexOffset: 1000,
+        })
 
-      liveShipmentMarker.bindPopup(`
-        <div class="ct-map-popup active-vessel">
-          <div class="popup-header">
-            <span class="popup-type-tag active-live">LIVE TELEMETRY</span>
-            <span class="popup-status-badge">${shipment.status || 'IN TRANSIT'}</span>
+        liveShipmentMarker.bindPopup(`
+          <div class="ct-map-popup active-vessel">
+            <div class="popup-header">
+              <span class="popup-type-tag active-live">LIVE TELEMETRY</span>
+              <span class="popup-status-badge">${shipment.status || 'IN TRANSIT'}</span>
+            </div>
+            <h4 class="popup-title">${shipment.id}</h4>
+            <div class="popup-address-block">
+              <strong>Current Telemetry Sector:</strong>
+              <p>${rawLiveLoc.fullAddress || rawLiveLoc.label || shipment.currentLocation}</p>
+            </div>
+            <div class="popup-details">
+              <div><strong>Destination ETA:</strong> ${shipment.eta || 'On Schedule'}</div>
+              <div><strong>Priority:</strong> ${shipment.priority || 'Standard'}</div>
+              <div><strong>AI Disruption Risk:</strong> ${shipment.risk || 'LOW'} (${shipment.riskScore || 20}/100)</div>
+              <div><strong>GPS:</strong> ${valLive.lat.toFixed(4)}°N, ${Math.abs(valLive.lon).toFixed(4)}°${valLive.lon >= 0 ? 'E' : 'W'}</div>
+            </div>
           </div>
-          <h4 class="popup-title">${shipment.id}</h4>
-          <div class="popup-address-block">
-            <strong>Current Telemetry Sector:</strong>
-            <p>${liveLocObj.fullAddress || liveLocObj.label || shipment.currentLocation}</p>
-          </div>
-          <div class="popup-details">
-            <div><strong>Destination ETA:</strong> ${shipment.eta || 'On Schedule'}</div>
-            <div><strong>Priority:</strong> ${shipment.priority || 'Standard'}</div>
-            <div><strong>AI Disruption Risk:</strong> ${shipment.risk || 'LOW'} (${shipment.riskScore || 20}/100)</div>
-            <div><strong>GPS:</strong> ${liveLocObj.lat.toFixed(4)}°N, ${Math.abs(liveLocObj.lon).toFixed(4)}°${liveLocObj.lon >= 0 ? 'E' : 'W'}</div>
-          </div>
-        </div>
-      `)
-      group.addLayer(liveShipmentMarker)
+        `)
+        group.addLayer(liveShipmentMarker)
+      }
     }
 
-    // 4. Smart Camera Zoom
-    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}_${(recPolylinePoints || []).length}`
+    // 4. Network-Wide Shipments Overlay (Distinguishable Shipment States & Risk Levels)
+    if (showAllShipments && allShipments && Array.isArray(allShipments)) {
+      allShipments.forEach((s) => {
+        if (s.id === shipment?.id) return // Active shipment already has pulse marker
+        const sLoc = getNodeCoord(s.currentLocation) || getNodeCoord(s.origin)
+        if (!sLoc || typeof sLoc.lat !== 'number') return
+        const valS = validateCoordinate(sLoc.lat, sLoc.lon, s.id)
+        if (!valS.valid) return
+
+        const riskLevel = (s.risk || 'LOW').toUpperCase()
+        const riskColor =
+          riskLevel === 'CRITICAL'
+            ? '#ef4444'
+            : riskLevel === 'HIGH'
+            ? '#f97316'
+            : riskLevel === 'MEDIUM'
+            ? '#eab308'
+            : '#10b981'
+
+        const otherIcon = L.divIcon({
+          className: 'ct-other-shipment-marker',
+          html: `<div class="other-shipment-dot" style="background: ${riskColor}; box-shadow: 0 0 8px ${riskColor};" title="${s.id}"></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6],
+        })
+
+        const otherMarker = L.marker([valS.lat, valS.lon], { icon: otherIcon })
+        otherMarker.bindTooltip(
+          `<strong>${s.id}</strong><br/>${s.origin?.split(',')[0]} → ${s.destination?.split(',')[0]}<br/>Status: ${s.status}<br/>Risk: <span style="color:${riskColor};font-weight:700;">${riskLevel}</span>`,
+          { direction: 'top', offset: [0, -8], className: 'ct-node-tooltip' }
+        )
+        otherMarker.on('click', () => {
+          if (onSelectShipment) onSelectShipment(s.id)
+        })
+        group.addLayer(otherMarker)
+      })
+    }
+
+    // 5. Smart Camera Zoom
+    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}_${(recPolylinePoints || []).length}_${showAllShipments}`
     if (lastFitKeyRef.current !== currentKey) {
       lastFitKeyRef.current = currentKey
       const pointsToFit = (recPolylinePoints && recPolylinePoints.length >= 2)
@@ -861,6 +983,9 @@ function DemoMap({
     criterion,
     alternativeRoute,
     shipment,
+    allShipments,
+    showAllShipments,
+    onSelectShipment,
     currentLocationObj,
     getNodeCoord,
   ])
@@ -911,10 +1036,26 @@ function DemoMap({
         <button
           type="button"
           className="map-control-btn"
-          title="Fit Route to View"
+          title="Fit Route Corridor to View"
           onClick={handleFitRoute}
         >
           <LocateFixed size={14} />
+        </button>
+        <button
+          type="button"
+          className="map-control-btn"
+          title="Center on Active Shipment"
+          onClick={handleFitShipment}
+        >
+          <Crosshair size={14} />
+        </button>
+        <button
+          type="button"
+          className={`map-control-btn ${showAllShipments ? 'active' : ''}`}
+          title="Toggle Fleet Shipment Markers Overlay"
+          onClick={() => setShowAllShipments(!showAllShipments)}
+        >
+          <Layers size={14} />
         </button>
         <button
           type="button"

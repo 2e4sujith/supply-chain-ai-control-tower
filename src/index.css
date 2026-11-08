@@ -5,46 +5,52 @@
     --font-mono: 'JetBrains Mono', monospace;
 
     /* Enterprise Dark Theme Palette */
-    --bg-app: #080c14;
-    --bg-sidebar: #0b101c;
-    --bg-topbar: rgba(11, 16, 28, 0.85);
+    --bg-app: #080C14;
+    --bg-sidebar: #0B101C;
+    --bg-topbar: rgba(11, 16, 28, 0.88);
     --bg-card: #101726;
     --bg-card-elevated: #162032;
-    --bg-card-hover: #1b263b;
-    --bg-input: #0d1422;
+    --bg-card-hover: #1A263D;
+    --bg-input: #0D1422;
 
-    --border-subtle: #1c273c;
+    --border-subtle: #1C273C;
     --border-card: #223048;
-    --border-active: #3b82f6;
+    --border-active: #25D9F8;
+    --border-glow: rgba(37, 217, 248, 0.35);
 
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #8493a8;
-    --text-dim: #54657e;
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #8493A8;
+    --text-dim: #54657E;
 
-    /* Semantic Status Colors */
-    --color-blue: #3b82f6;
+    /* Semantic Status & Accents */
+    --color-cyan: #25D9F8;
+    --color-cyan-bg: rgba(37, 217, 248, 0.12);
+    --color-cyan-border: rgba(37, 217, 248, 0.3);
+
+    --color-blue: #3B82F6;
     --color-blue-bg: rgba(59, 130, 246, 0.12);
     --color-blue-border: rgba(59, 130, 246, 0.3);
 
-    --color-green: #10b981;
-    --color-green-bg: rgba(16, 185, 129, 0.12);
-    --color-green-border: rgba(16, 185, 129, 0.3);
-
-    --color-amber: #f59e0b;
-    --color-amber-bg: rgba(245, 158, 11, 0.12);
-    --color-amber-border: rgba(245, 158, 11, 0.3);
-
-    --color-red: #ef4444;
-    --color-red-bg: rgba(239, 68, 68, 0.12);
-    --color-red-border: rgba(239, 68, 68, 0.3);
-
-    --color-purple: #8b5cf6;
+    --color-purple: #8B5CF6;
     --color-purple-bg: rgba(139, 92, 246, 0.12);
     --color-purple-border: rgba(139, 92, 246, 0.3);
 
-    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
-    --shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --color-green: #22C55E;
+    --color-green-bg: rgba(34, 197, 94, 0.12);
+    --color-green-border: rgba(34, 197, 94, 0.3);
+
+    --color-amber: #F59E0B;
+    --color-amber-bg: rgba(245, 158, 11, 0.12);
+    --color-amber-border: rgba(245, 158, 11, 0.3);
+
+    --color-red: #F43F5E;
+    --color-red-bg: rgba(244, 63, 94, 0.12);
+    --color-red-border: rgba(244, 63, 94, 0.3);
+
+    --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.38);
+    --shadow-elevated: 0 10px 32px rgba(0, 0, 0, 0.48);
+    --shadow-cyan-glow: 0 0 20px rgba(37, 217, 248, 0.2);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;

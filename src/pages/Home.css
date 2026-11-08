@@ -108,9 +108,14 @@
 
 .kpi-card:hover {
     transform: translateY(-2px);
-    border-color: #3b82f6 !important;
-    background: #162032 !important;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+    border-color: var(--color-cyan) !important;
+    background: #141f33 !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(37, 217, 248, 0.12);
+}
+
+.dashboard-globe-section {
+    margin-bottom: 24px;
+    width: 100%;
 }
 
 .kpi-card-top {
@@ -162,6 +167,12 @@
 }
 
 /* Control Split Grid */
+/* Flagship 3D Logistics Digital Twin Centerpiece */
+.dashboard-globe-section {
+    margin-bottom: 24px;
+    width: 100%;
+}
+
 .control-split-grid {
     display: grid;
     grid-template-columns: 1fr 1.25fr;

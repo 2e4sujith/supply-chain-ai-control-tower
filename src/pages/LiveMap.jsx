@@ -2,9 +2,12 @@ import {
   AlertTriangle,
   Check,
   Compass,
+  Filter,
   LocateFixed,
+  Map as MapIcon,
   RefreshCw,
   Route,
+  Search,
   ShieldAlert,
   Sliders,
   TrendingDown,
@@ -19,7 +22,7 @@ import {
   Play,
   Lightbulb
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { getAlternativeRoute, getShipments, predictRisk, predictGNNRisk, simulateWhatIf } from '../services/api.js'
 import DemoMap from '../components/DemoMap.jsx'
 import { geocodeAddress } from '../services/geocoding.js'
@@ -28,6 +31,9 @@ import './LiveMap.css'
 function LiveMap() {
   const [shipments, setShipments] = useState([])
   const [selectedId, setSelectedId] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [riskFilter, setRiskFilter] = useState('ALL')
+  const [searchQuery, setSearchQuery] = useState('')
   const [criterion, setCriterion] = useState('risk_adjusted')
   const [feedback, setFeedback] = useState('')
   const [route, setRoute] = useState(null)
@@ -79,7 +85,37 @@ function LiveMap() {
     load()
   }, [])
 
-  const shipment = shipments.find(({ id }) => id === selectedId) ?? shipments[0]
+  const filteredShipments = useMemo(() => {
+    return shipments.filter((s) => {
+      const sStatus = (s.status || '').toUpperCase().replace(/\s+/g, '_')
+      const matchStatus =
+        statusFilter === 'ALL' ||
+        sStatus === statusFilter ||
+        (statusFilter === 'IN_TRANSIT' && sStatus.includes('TRANSIT'))
+      const sRisk = (s.risk || '').toUpperCase()
+      const matchRisk = riskFilter === 'ALL' || sRisk === riskFilter
+      const q = searchQuery.trim().toLowerCase()
+      const matchSearch =
+        !q ||
+        (s.id || '').toLowerCase().includes(q) ||
+        (s.origin || '').toLowerCase().includes(q) ||
+        (s.destination || '').toLowerCase().includes(q)
+      return matchStatus && matchRisk && matchSearch
+    })
+  }, [shipments, statusFilter, riskFilter, searchQuery])
+
+  // Auto-sync selected shipment with filtered list
+  useEffect(() => {
+    if (filteredShipments.length > 0 && !filteredShipments.some((s) => s.id === selectedId)) {
+      setSelectedId(filteredShipments[0].id)
+    }
+  }, [filteredShipments, selectedId])
+
+  const shipment =
+    filteredShipments.find(({ id }) => id === selectedId) ??
+    shipments.find(({ id }) => id === selectedId) ??
+    filteredShipments[0] ??
+    shipments[0]
 
   // Address Resolution Hook
   useEffect(() => {
@@ -350,9 +386,66 @@ function LiveMap() {
 
       {/* Clean Control Toolbar Above Map */}
       <div className="map-toolbar">
-        {/* Control 1: Shipment Selector */}
+        {/* Filter 1: Search */}
+        <div className="toolbar-item search-item">
+          <span className="toolbar-label">Search</span>
+          <div className="toolbar-search-wrap">
+            <Search size={13} className="search-icon" />
+            <input
+              type="text"
+              className="toolbar-search-input"
+              placeholder="Filter by ID, Origin, Destination..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="clear-search-btn"
+                onClick={() => setSearchQuery('')}
+                title="Clear Search"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter 2: Status Filter */}
         <div className="toolbar-item">
-          <span className="toolbar-label">Shipment</span>
+          <span className="toolbar-label">Status</span>
+          <select
+            className="toolbar-select mini"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="IN_TRANSIT">In Transit</option>
+            <option value="DELAYED">Delayed</option>
+            <option value="DELIVERED">Delivered</option>
+            <option value="EXCEPTION">Exception</option>
+          </select>
+        </div>
+
+        {/* Filter 3: Risk Filter */}
+        <div className="toolbar-item">
+          <span className="toolbar-label">Risk</span>
+          <select
+            className="toolbar-select mini"
+            value={riskFilter}
+            onChange={(e) => setRiskFilter(e.target.value)}
+          >
+            <option value="ALL">All Risk Levels</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        {/* Control: Shipment Selector (Filtered) */}
+        <div className="toolbar-item">
+          <span className="toolbar-label">Shipment ({filteredShipments.length})</span>
           <select
             className="toolbar-select"
             value={selectedId}
@@ -365,15 +458,19 @@ function LiveMap() {
               setWhatIfResult(null)
             }}
           >
-            {shipments.map(({ id, origin, destination }) => (
-              <option key={id} value={id}>
-                {id} · {origin.split(',')[0]} → {destination.split(',')[0]}
-              </option>
-            ))}
+            {filteredShipments.length === 0 ? (
+              <option value="">No matching shipments</option>
+            ) : (
+              filteredShipments.map(({ id, origin, destination, risk }) => (
+                <option key={id} value={id}>
+                  {id} · {origin.split(',')[0]} → {destination.split(',')[0]} [{risk || 'LOW'}]
+                </option>
+              ))
+            )}
           </select>
         </div>
 
-        {/* Control 2: Route Objective Selector */}
+        {/* Control: Route Objective Selector */}
         <div className="toolbar-item">
           <span className="toolbar-label">Route Objective</span>
           <div className="objective-pills">
@@ -401,7 +498,13 @@ function LiveMap() {
           </div>
         </div>
 
-        {/* Control 3: What-If Simulator Button */}
+        {/* Map Type Indicator */}
+        <div className="map-badge-indicator" title="Genuine Geographic Interactive Map (Leaflet & OpenStreetMap)">
+          <MapIcon size={13} />
+          <span>Geographic Map</span>
+        </div>
+
+        {/* Control 4: What-If Simulator Button */}
         <button
           type="button"
           className={`what-if-btn ${isWhatIfOpen ? 'open' : ''}`}
@@ -611,10 +714,18 @@ function LiveMap() {
 
       {/* Main 2-Column Map Workspace */}
       <section className="map-workspace">
-        {/* Left: Actual Leaflet Map (approx 68% width) */}
+        {/* Left: Real Geographic Interactive Corridor Map (Leaflet & OpenStreetMap) */}
         <div className="map-col-left">
           <DemoMap
             shipment={shipment}
+            allShipments={filteredShipments}
+            onSelectShipment={(id) => {
+              setSelectedId(id)
+              setFeedback('')
+              setRoute(null)
+              setRisk(null)
+              setGnnRisk(null)
+            }}
             route={route}
             criterion={criterion}
             alternativeRoute={Boolean(route)}

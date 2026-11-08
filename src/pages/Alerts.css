@@ -219,6 +219,25 @@
   border-color: #38bdf8;
 }
 
+.delete-button {
+  background: transparent;
+  border: 1px solid #223048;
+  color: #64748b;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.delete-button:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #f43f5e;
+}
+
 .empty-alerts {
   padding: 32px;
   text-align: center;

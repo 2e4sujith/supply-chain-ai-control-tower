@@ -409,3 +409,44 @@
   flex-direction: column;
   gap: 3px;
 }
+
+/* Route Direction Arrow Icons */
+.ct-route-arrow-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.route-arrow-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
+}
+
+/* Other Shipments in Network Overlay */
+.ct-other-shipment-marker {
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+}
+
+.other-shipment-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.other-shipment-dot:hover {
+  transform: scale(1.5);
+  box-shadow: 0 0 10px #ffffff !important;
+}
+
+.map-control-btn.active {
+  background: rgba(56, 189, 248, 0.25) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
