@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { compareModels, getModelBenchmarkReport, getShipments } from '../services/api'
+import Network3DVisual from '../components/Network3DVisual'
 import './AIInsights.css'
 
 // Default fallback benchmark metrics strictly measured on 750 DataCo test samples
@@ -159,6 +160,9 @@ export default function AIInsights() {
           </p>
         </div>
       </div>
+
+      {/* 3D Graph Neural Network Topology Visualizer */}
+      <Network3DVisual />
 
       {/* Methodology Architecture Panel (3 Cards) */}
       <section className="methodology-container">

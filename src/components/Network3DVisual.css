@@ -1,0 +1,164 @@
+/* ==========================================================================
+   Network3DVisual Component — 3D Graph Neural Network Topology Canvas
+   ========================================================================== */
+
+.network-3d-card {
+  background: #101726;
+  border: 1px solid #223048;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.network-3d-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981, #38bdf8, #8b5cf6);
+  opacity: 0.8;
+}
+
+.network-3d-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.network-3d-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.network-3d-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 9px;
+  border-radius: 6px;
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.network-3d-subtitle {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.network-3d-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #162032;
+  border: 1px solid #223048;
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #8493a8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.network-3d-toggle:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.network-3d-toggle.active {
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.network-3d-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: radial-gradient(circle at center, #131c30 0%, #0a0f1c 100%);
+  border: 1px solid #1a2538;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.network-3d-canvas-wrapper:active {
+  cursor: grabbing;
+}
+
+.network-3d-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.network-3d-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 10px;
+  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+  pointer-events: none;
+  background: rgba(10, 15, 28, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.network-3d-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.n3d-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.n3d-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.n3d-dot.india {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.n3d-dot.asia {
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+.n3d-dot.europe {
+  background: #c084fc;
+  box-shadow: 0 0 6px rgba(192, 132, 252, 0.6);
+}
+
+.n3d-dot.na {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+}

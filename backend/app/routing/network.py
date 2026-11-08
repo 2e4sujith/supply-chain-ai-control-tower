@@ -38,6 +38,7 @@ DEFAULT_NODES = {
     "Machilipatnam": {"name": "Machilipatnam Port & Logistics", "city": "Machilipatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 16.1808, "lon": 81.1303, "congestion_level": 20.0},
     "Nuzuvidu": {"name": "Nuzvid Freight Center", "city": "Nuzvid", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 16.7850, "lon": 80.8488, "congestion_level": 20.0},
     "Visakhapatnam": {"name": "Port of Visakhapatnam", "city": "Visakhapatnam", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 17.6868, "lon": 83.2185, "congestion_level": 40.0},
+    "Nellore": {"name": "Nellore Logistics Terminal", "city": "Nellore", "country": "IN", "region": "South_Asia", "type": "Road_Hub", "lat": 14.4426, "lon": 79.9865, "congestion_level": 25.0},
     "Hyderabad": {"name": "Hyderabad Logistics Center", "city": "Hyderabad", "country": "IN", "region": "South_Asia", "type": "Inland_Hub", "lat": 17.3850, "lon": 78.4867, "congestion_level": 45.0},
     "Chennai": {"name": "Chennai Port & Hub", "city": "Chennai", "country": "IN", "region": "South_Asia", "type": "Port", "lat": 13.0827, "lon": 80.2707, "congestion_level": 50.0},
     "Delhi": {"name": "Delhi NCR Freight Terminal", "city": "Delhi", "country": "IN", "region": "South_Asia", "type": "Rail_Terminal", "lat": 28.6139, "lon": 77.2090, "congestion_level": 55.0},
@@ -110,7 +111,9 @@ DEFAULT_EDGES = [
     ("Vijayawada", "Hyderabad", {"distance_km": 275.0, "base_time_hours": 5.0, "mode": "Road", "corridor_name": "NH 65 Hyderabad-Vijayawada Highway", "status": "Active", "risk_weight": 0.95}),
     ("Vijayawada", "Chennai", {"distance_km": 430.0, "base_time_hours": 7.5, "mode": "Road", "corridor_name": "NH 16 Southern Corridor", "status": "Active", "risk_weight": 1.00}),
     ("Mumbai", "Vijayawada", {"distance_km": 950.0, "base_time_hours": 18.0, "mode": "Rail", "corridor_name": "Central-Eastern Intermodal Rail", "status": "Active", "risk_weight": 1.00}),
-    ("Visakhapatnam", "Kolkata", {"distance_km": 880.0, "base_time_hours": 16.0, "mode": "Rail", "corridor_name": "East Coast Rail Corridor", "status": "Active", "risk_weight": 1.00}),
+    ("Vijayawada", "Nellore", {"distance_km": 280.0, "base_time_hours": 4.8, "mode": "Road", "corridor_name": "NH 16 Vijayawada-Nellore Expressway", "status": "Active", "risk_weight": 0.95}),
+    ("Nellore", "Chennai", {"distance_km": 175.0, "base_time_hours": 3.2, "mode": "Road", "corridor_name": "NH 16 Nellore-Chennai Corridor", "status": "Active", "risk_weight": 0.95}),
+    ("Guntur", "Nellore", {"distance_km": 245.0, "base_time_hours": 4.2, "mode": "Road", "corridor_name": "NH 16 Guntur-Nellore Corridor", "status": "Active", "risk_weight": 0.95}),
     ("Chennai", "Singapore", {"distance_km": 2900.0, "base_time_hours": 90.0, "mode": "Ocean", "corridor_name": "Bay of Bengal - Malacca Sea Lane", "status": "Active", "risk_weight": 1.00}),
 
     # Asia -> Middle East -> Europe Maritime Corridors
@@ -427,6 +430,8 @@ class SupplyChainRouteNetwork:
             "vizag": "Visakhapatnam",
             "vtz": "Visakhapatnam",
             "visakhapatnam": "Visakhapatnam",
+            "nellore": "Nellore",
+            "nlr": "Nellore",
             "hyd": "Hyderabad",
             "hyderabad": "Hyderabad",
             "chennai": "Chennai",

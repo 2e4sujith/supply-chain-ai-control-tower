@@ -84,12 +84,13 @@
     cursor: not-allowed;
 }
 
-/* KPI Cards Grid */
+/* KPI Cards Grid with Subtle 3D Perspective */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 24px;
+    perspective: 1200px;
 }
 
 .kpi-card {
@@ -102,15 +103,34 @@
     justify-content: space-between;
     min-height: 130px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    transform-style: preserve-3d;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.28s ease;
 }
 
 .kpi-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--color-cyan) !important;
-    background: #141f33 !important;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(37, 217, 248, 0.12);
+    transform: translateY(-4px) translateZ(10px);
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    background: linear-gradient(180deg, #152033 0%, #101726 100%) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.12), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+.kpi-card:hover::before {
+    opacity: 1;
 }
 
 .dashboard-globe-section {

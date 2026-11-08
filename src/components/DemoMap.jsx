@@ -208,7 +208,14 @@ function getSegmentMode(nodeA, nodeB, routeSegments) {
 function buildSynchronousRoutePolyline(nodesWithCoords, routeSegments) {
   if (!nodesWithCoords || nodesWithCoords.length < 2) return []
 
-  const validNodes = nodesWithCoords.filter((n) => n && n.coord && typeof n.coord.lat === 'number')
+  const validNodes = nodesWithCoords
+    .filter((n) => n && n.coord && typeof n.coord.lat === 'number' && typeof n.coord.lon === 'number')
+    .map((n) => {
+      const v = validateCoordinate(n.coord.lat, n.coord.lon, n.name)
+      return v.valid ? { ...n, coord: { ...n.coord, lat: v.lat, lon: v.lon } } : null
+    })
+    .filter(Boolean)
+
   if (validNodes.length < 2) return []
 
   const fullPoints = []
@@ -242,7 +249,14 @@ function buildSynchronousRoutePolyline(nodesWithCoords, routeSegments) {
 async function buildAsynchronousRoutePolyline(nodesWithCoords, routeSegments, signal) {
   if (!nodesWithCoords || nodesWithCoords.length < 2) return { points: [], hasRoad: false }
 
-  const validNodes = nodesWithCoords.filter((n) => n && n.coord && typeof n.coord.lat === 'number')
+  const validNodes = nodesWithCoords
+    .filter((n) => n && n.coord && typeof n.coord.lat === 'number' && typeof n.coord.lon === 'number')
+    .map((n) => {
+      const v = validateCoordinate(n.coord.lat, n.coord.lon, n.name)
+      return v.valid ? { ...n, coord: { ...n.coord, lat: v.lat, lon: v.lon } } : null
+    })
+    .filter(Boolean)
+
   if (validNodes.length < 2) return { points: [], hasRoad: false }
 
   let hasRoadSegments = false
@@ -294,10 +308,12 @@ function fitMapToRoute(map, coords, animate = true) {
   const normalized = coords
     .map((c) => {
       if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') {
-        return [c[0], c[1]]
+        const val = validateCoordinate(c[0], c[1])
+        return val.valid ? [val.lat, val.lon] : null
       }
       if (c && typeof c.lat === 'number' && typeof c.lon === 'number') {
-        return [c.lat, c.lon]
+        const val = validateCoordinate(c.lat, c.lon)
+        return val.valid ? [val.lat, val.lon] : null
       }
       return null
     })
@@ -312,8 +328,8 @@ function fitMapToRoute(map, coords, animate = true) {
 
   const bounds = L.latLngBounds(normalized)
   map.fitBounds(bounds, {
-    padding: [45, 45],
-    maxZoom: 14,
+    padding: [50, 50],
+    maxZoom: 13,
     animate,
     duration: 0.7,
   })
@@ -343,25 +359,30 @@ function DemoMap({
 
   // 1. Raw Node Names for paths
   const rawRecommendedNames = useMemo(() => {
-    if (route?.recommended_route && Array.isArray(route.recommended_route) && route.recommended_route.length >= 2) {
-      return route.recommended_route
+    if (route && (!route.shipment_id || !shipment?.id || route.shipment_id === shipment.id)) {
+      if (route.recommended_route && Array.isArray(route.recommended_route) && route.recommended_route.length >= 2) {
+        return route.recommended_route
+      }
     }
     return null
-  }, [route?.recommended_route])
+  }, [route?.recommended_route, route?.shipment_id, shipment?.id])
 
   const rawCurrentNames = useMemo(() => {
-    if (route?.current_route && Array.isArray(route.current_route) && route.current_route.length >= 2) {
-      return route.current_route
+    if (route && (!route.shipment_id || !shipment?.id || route.shipment_id === shipment.id)) {
+      if (route.current_route && Array.isArray(route.current_route) && route.current_route.length >= 2) {
+        return route.current_route
+      }
     }
-    const origin = shipment?.origin || 'Shanghai'
-    const dest = shipment?.destination || 'Long_Beach'
+    const origin = shipment?.origin
+    const dest = shipment?.destination
+    if (!origin || !dest) return []
     const curr = shipment?.currentLocation &&
       !shipment.currentLocation.toLowerCase().includes('in transit') &&
       !shipment.currentLocation.toLowerCase().includes('delivered')
         ? shipment.currentLocation
         : null
     return [origin, curr, dest].filter(Boolean)
-  }, [route?.current_route, shipment?.origin, shipment?.destination, shipment?.currentLocation])
+  }, [route?.current_route, route?.shipment_id, shipment?.origin, shipment?.destination, shipment?.currentLocation, shipment?.id])
 
   // 2. Geocode any node names that are not yet resolved
   useEffect(() => {
@@ -435,13 +456,31 @@ function DemoMap({
   )
 
   const origCoord = useMemo(() => {
-    if (originLocation && originLocation.lat) return originLocation
-    return getNodeCoord(shipment?.origin || rawCurrentNames[0])
+    if (originLocation && originLocation.lat) {
+      const val = validateCoordinate(originLocation.lat, originLocation.lon, 'Origin Location')
+      if (val.valid) return { ...originLocation, lat: val.lat, lon: val.lon }
+    }
+    const rawName = shipment?.origin || rawCurrentNames?.[0]
+    const coord = getNodeCoord(rawName)
+    if (coord && typeof coord.lat === 'number') {
+      const val = validateCoordinate(coord.lat, coord.lon, rawName || 'Origin')
+      if (val.valid) return { ...coord, lat: val.lat, lon: val.lon }
+    }
+    return null
   }, [originLocation, getNodeCoord, shipment?.origin, rawCurrentNames])
 
   const destCoord = useMemo(() => {
-    if (destinationLocation && destinationLocation.lat) return destinationLocation
-    return getNodeCoord(shipment?.destination || rawCurrentNames[rawCurrentNames.length - 1])
+    if (destinationLocation && destinationLocation.lat) {
+      const val = validateCoordinate(destinationLocation.lat, destinationLocation.lon, 'Destination Location')
+      if (val.valid) return { ...destinationLocation, lat: val.lat, lon: val.lon }
+    }
+    const rawName = shipment?.destination || rawCurrentNames?.[rawCurrentNames.length - 1]
+    const coord = getNodeCoord(rawName)
+    if (coord && typeof coord.lat === 'number') {
+      const val = validateCoordinate(coord.lat, coord.lon, rawName || 'Destination')
+      if (val.valid) return { ...coord, lat: val.lat, lon: val.lon }
+    }
+    return null
   }, [destinationLocation, getNodeCoord, shipment?.destination, rawCurrentNames])
 
   // Prepare node arrays with coordinates
@@ -464,11 +503,16 @@ function DemoMap({
   }, [rawRecommendedNames, rawCurrentNames])
 
   // Polyline Geometry Points State (Dual-phase: backend route_geometry + async OSRM upgrade)
+  const isMatchingShipment = Boolean(
+    route && (!route.shipment_id || !shipment?.id || route.shipment_id === shipment.id)
+  )
+
   const [geometryPoints, setGeometryPoints] = useState(() => {
-    const backendGeo = route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    const backendGeo = isMatchingShipment && route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    const segs = isMatchingShipment ? route?.segments : null
     return {
-      current: buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments),
-      recommended: backendGeo || (recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null),
+      current: buildSynchronousRoutePolyline(currentNodesWithCoords, segs),
+      recommended: backendGeo || (recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, segs) : null),
     }
   })
 
@@ -479,14 +523,20 @@ function DemoMap({
 
     let isMounted = true
 
+    const isMatch = Boolean(
+      route && (!route.shipment_id || !shipment?.id || route.shipment_id === shipment.id)
+    )
+    const activeRouteGeo = isMatch && route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    const activeSegments = isMatch ? route?.segments : null
+
     // If backend provided high-precision road route_geometry (length >= 2)
-    if (route?.route_geometry && route.route_geometry.length >= 2) {
+    if (activeRouteGeo) {
       setHasRealRoadGeometry(true)
       setIsRoadLoading(false)
-      const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments)
+      const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, activeSegments)
       setGeometryPoints({
-        current: isIdenticalRoute ? route.route_geometry : syncCurrent,
-        recommended: route.route_geometry,
+        current: isIdenticalRoute ? activeRouteGeo : syncCurrent,
+        recommended: activeRouteGeo,
       })
       return () => {
         clearTimeout(timeoutId)
@@ -497,17 +547,17 @@ function DemoMap({
     setIsRoadLoading(true)
 
     // Phase 1: Set synchronous baseline immediately
-    const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, route?.segments)
-    const syncRec = recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, route?.segments) : null
+    const syncCurrent = buildSynchronousRoutePolyline(currentNodesWithCoords, activeSegments)
+    const syncRec = recNodesWithCoords ? buildSynchronousRoutePolyline(recNodesWithCoords, activeSegments) : null
     setGeometryPoints({ current: syncCurrent, recommended: syncRec })
 
     // Phase 2: Fetch high-precision OSRM road geometry if backend didn't supply it
     async function resolveHighPrecisionGeometry() {
       try {
         const [currentRes, recRes] = await Promise.all([
-          buildAsynchronousRoutePolyline(currentNodesWithCoords, route?.segments, controller.signal),
+          buildAsynchronousRoutePolyline(currentNodesWithCoords, activeSegments, controller.signal),
           recNodesWithCoords
-            ? buildAsynchronousRoutePolyline(recNodesWithCoords, route?.segments, controller.signal)
+            ? buildAsynchronousRoutePolyline(recNodesWithCoords, activeSegments, controller.signal)
             : Promise.resolve(null),
         ])
 
@@ -536,7 +586,7 @@ function DemoMap({
       clearTimeout(timeoutId)
       controller.abort()
     }
-  }, [currentNodesWithCoords, recNodesWithCoords, route?.segments, route?.route_geometry, isIdenticalRoute])
+  }, [currentNodesWithCoords, recNodesWithCoords, route?.segments, route?.route_geometry, route?.shipment_id, shipment?.id, isIdenticalRoute])
 
   // Initialize Leaflet Map Instance with Key-Free OpenStreetMap Tiles
   useEffect(() => {
@@ -683,102 +733,110 @@ function DemoMap({
 
     const displayedNodeItems = recNodesWithCoords || currentNodesWithCoords
     const validCoords = []
+    const hasValidEndpoints = Boolean(
+      origCoord && typeof origCoord.lat === 'number' &&
+      destCoord && typeof destCoord.lat === 'number' &&
+      validateCoordinate(origCoord.lat, origCoord.lon).valid &&
+      validateCoordinate(destCoord.lat, destCoord.lon).valid
+    )
 
     // 1. Draw Clean Route Polylines (Differentiating Optimal Route vs Alternative Route)
-    if (isIdenticalRoute) {
-      // Single Optimal Route
-      if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
-        const singleGlow = L.polyline(currentPolylinePoints, {
-          color: '#10b981',
-          weight: 8,
-          opacity: 0.22,
-          lineCap: 'round',
-          lineJoin: 'round',
-        })
-        group.addLayer(singleGlow)
-
-        const singleLine = L.polyline(currentPolylinePoints, {
-          color: '#059669',
-          weight: 4.5,
-          opacity: 0.95,
-          lineCap: 'round',
-          lineJoin: 'round',
-        })
-        singleLine.bindTooltip(
-          `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'OPTIMAL'}`,
-          { sticky: true, className: 'ct-route-tooltip optimal' }
-        )
-        group.addLayer(singleLine)
-      }
-    } else {
-      // Alternative Baseline Corridor (subtle dashed line)
-      if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
-        const baselineLine = L.polyline(currentPolylinePoints, {
-          color: '#64748b',
-          weight: 3,
-          dashArray: '6, 6',
-          opacity: 0.75,
-          lineCap: 'round',
-          lineJoin: 'round',
-        })
-        baselineLine.bindTooltip('Alternative Route (Baseline Corridor)', {
-          sticky: true,
-          className: 'ct-route-tooltip',
-        })
-        group.addLayer(baselineLine)
-      }
-
-      // Optimal Dijkstra Recommended Route (Dominant vibrant emerald line)
-      if (recPolylinePoints && recPolylinePoints.length >= 2) {
-        const recGlow = L.polyline(recPolylinePoints, {
-          color: '#10b981',
-          weight: 8,
-          opacity: 0.25,
-          lineCap: 'round',
-          lineJoin: 'round',
-        })
-        group.addLayer(recGlow)
-
-        const recLine = L.polyline(recPolylinePoints, {
-          color: '#059669',
-          weight: 5,
-          opacity: 0.98,
-          lineCap: 'round',
-          lineJoin: 'round',
-        })
-        recLine.bindTooltip(
-          `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'DIJKSTRA RECOMMENDED'}`,
-          { sticky: true, className: 'ct-route-tooltip optimal' }
-        )
-        group.addLayer(recLine)
-      }
-    }
-
-    // 1b. Draw Direction Indicators along Route Polylines (Origin -> Destination)
-    const activeRoutePts = (recPolylinePoints && recPolylinePoints.length >= 2)
-      ? recPolylinePoints
-      : currentPolylinePoints
-    if (activeRoutePts && activeRoutePts.length >= 4) {
-      const arrowStep = Math.max(4, Math.floor(activeRoutePts.length / 6))
-      for (let i = Math.floor(arrowStep / 2); i < activeRoutePts.length - 1; i += arrowStep) {
-        const p1 = activeRoutePts[i]
-        const p2 = activeRoutePts[i + 1]
-        if (p1 && p2 && p1.length >= 2 && p2.length >= 2) {
-          const brng = calculateBearing(p1[0], p1[1], p2[0], p2[1])
-          const arrowIcon = L.divIcon({
-            className: 'ct-route-arrow-marker',
-            html: `
-              <div class="route-arrow-wrapper" style="transform: rotate(${brng}deg);">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="#34d399" stroke="#064e3b" stroke-width="1.5"/>
-                </svg>
-              </div>
-            `,
-            iconSize: [12, 12],
-            iconAnchor: [6, 6],
+    if (hasValidEndpoints) {
+      if (isIdenticalRoute) {
+        // Single Optimal Route
+        if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
+          const singleGlow = L.polyline(currentPolylinePoints, {
+            color: '#10b981',
+            weight: 8,
+            opacity: 0.22,
+            lineCap: 'round',
+            lineJoin: 'round',
           })
-          const arrowMarker = L.marker([p1[0], p1[1]], { icon: arrowIcon, interactive: false })
-          group.addLayer(arrowMarker)
+          group.addLayer(singleGlow)
+
+          const singleLine = L.polyline(currentPolylinePoints, {
+            color: '#059669',
+            weight: 4.5,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round',
+          })
+          singleLine.bindTooltip(
+            `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'OPTIMAL'}`,
+            { sticky: true, className: 'ct-route-tooltip optimal' }
+          )
+          group.addLayer(singleLine)
+        }
+      } else {
+        // Alternative Baseline Corridor (subtle dashed line)
+        if (currentPolylinePoints && currentPolylinePoints.length >= 2) {
+          const baselineLine = L.polyline(currentPolylinePoints, {
+            color: '#64748b',
+            weight: 3,
+            dashArray: '6, 6',
+            opacity: 0.75,
+            lineCap: 'round',
+            lineJoin: 'round',
+          })
+          baselineLine.bindTooltip('Alternative Route (Baseline Corridor)', {
+            sticky: true,
+            className: 'ct-route-tooltip',
+          })
+          group.addLayer(baselineLine)
+        }
+
+        // Optimal Dijkstra Recommended Route (Dominant vibrant emerald line)
+        if (recPolylinePoints && recPolylinePoints.length >= 2) {
+          const recGlow = L.polyline(recPolylinePoints, {
+            color: '#10b981',
+            weight: 8,
+            opacity: 0.25,
+            lineCap: 'round',
+            lineJoin: 'round',
+          })
+          group.addLayer(recGlow)
+
+          const recLine = L.polyline(recPolylinePoints, {
+            color: '#059669',
+            weight: 5,
+            opacity: 0.98,
+            lineCap: 'round',
+            lineJoin: 'round',
+          })
+          recLine.bindTooltip(
+            `Optimal Route · ${criterion ? criterion.replace('_', ' ').toUpperCase() : 'DIJKSTRA RECOMMENDED'}`,
+            { sticky: true, className: 'ct-route-tooltip optimal' }
+          )
+          group.addLayer(recLine)
+        }
+      }
+
+      // 1b. Draw Direction Indicators along Route Polylines (Origin -> Destination)
+      const activeRoutePts = (recPolylinePoints && recPolylinePoints.length >= 2)
+        ? recPolylinePoints
+        : currentPolylinePoints
+      if (activeRoutePts && activeRoutePts.length >= 4) {
+        const arrowStep = Math.max(4, Math.floor(activeRoutePts.length / 6))
+        for (let i = Math.floor(arrowStep / 2); i < activeRoutePts.length - 1; i += arrowStep) {
+          const p1 = activeRoutePts[i]
+          const p2 = activeRoutePts[i + 1]
+          if (p1 && p2 && p1.length >= 2 && p2.length >= 2) {
+            const brng = calculateBearing(p1[0], p1[1], p2[0], p2[1])
+            const arrowIcon = L.divIcon({
+              className: 'ct-route-arrow-marker',
+              html: `
+                <div class="route-arrow-wrapper" style="transform: rotate(${brng}deg);">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="#34d399" stroke="#064e3b" stroke-width="1.5"/>
+                  </svg>
+                </div>
+              `,
+              iconSize: [12, 12],
+              iconAnchor: [6, 6],
+            })
+            const arrowMarker = L.marker([p1[0], p1[1]], { icon: arrowIcon, interactive: false })
+            group.addLayer(arrowMarker)
+          }
         }
       }
     }
@@ -960,16 +1018,18 @@ function DemoMap({
     }
 
     // 5. Smart Camera Zoom
-    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}_${(recPolylinePoints || []).length}_${showAllShipments}`
+    const currentKey = `${shipment?.id || ''}_${(displayedNodeItems || []).map((d) => d.name).join('-')}_${criterion || ''}_${(recPolylinePoints || []).length}_${showAllShipments}_${hasValidEndpoints}`
     if (lastFitKeyRef.current !== currentKey) {
       lastFitKeyRef.current = currentKey
-      const pointsToFit = (recPolylinePoints && recPolylinePoints.length >= 2)
-        ? recPolylinePoints
-        : (currentPolylinePoints && currentPolylinePoints.length >= 2)
-        ? currentPolylinePoints
-        : validCoords
-      if (pointsToFit && pointsToFit.length > 0) {
-        fitMapToRoute(map, pointsToFit, true)
+      if (hasValidEndpoints) {
+        const pointsToFit = (recPolylinePoints && recPolylinePoints.length >= 2)
+          ? recPolylinePoints
+          : (currentPolylinePoints && currentPolylinePoints.length >= 2)
+          ? currentPolylinePoints
+          : validCoords
+        if (pointsToFit && pointsToFit.length > 0) {
+          fitMapToRoute(map, pointsToFit, true)
+        }
       }
     }
   }, [
@@ -1101,16 +1161,21 @@ function DemoMap({
         </div>
       </div>
 
-      {/* Location Resolution Warning */}
-      {(!origCoord || !destCoord) && (
-        <div className="unresolved-location-banner">
-          <AlertCircle size={13} />
-          <span>
-            Geocoding notice:{' '}
-            {!origCoord ? `Origin "${shipment?.origin}"` : ''}
-            {!origCoord && !destCoord ? ' and ' : ''}
-            {!destCoord ? `Destination "${shipment?.destination}"` : ''} Location could not be resolved.
-          </span>
+      {/* Location Resolution Warning / Clean Fallback Message */}
+      {(!origCoord || !destCoord) && shipment && (
+        <div className="unresolved-location-banner error-state">
+          <AlertCircle size={15} />
+          <div className="unresolved-text">
+            <strong>Route Coordinates Unresolved</strong>
+            <p>
+              {!origCoord && !destCoord
+                ? `Coordinates for both Origin "${shipment.origin}" and Destination "${shipment.destination}" are currently unavailable.`
+                : !origCoord
+                ? `Origin coordinates for "${shipment.origin}" could not be resolved.`
+                : `Destination coordinates for "${shipment.destination}" could not be resolved.`}
+              {' '}Fallback global route suppressed to maintain real map fidelity.
+            </p>
+          </div>
         </div>
       )}
 

@@ -157,6 +157,15 @@ function LiveMap() {
     }
   }, [shipment?.id, shipment?.origin, shipment?.destination, shipment?.currentLocation])
 
+  // Reset route and telemetrics immediately when switching active shipment to prevent stale routes
+  useEffect(() => {
+    setRoute(null)
+    setPendingRecommendation(null)
+    setRisk(null)
+    setGnnRisk(null)
+    setWhatIfResult(null)
+  }, [shipment?.id])
+
   // Route Continuous Monitoring Hook
   useEffect(() => {
     if (!shipment?.id || !monitoringActive) return
@@ -179,7 +188,7 @@ function LiveMap() {
         if (latestGnn) setGnnRisk(latestGnn)
 
         setRoute((activeRoute) => {
-          if (!activeRoute) {
+          if (!activeRoute || activeRoute.shipment_id !== latestRoute.shipment_id) {
             return latestRoute
           }
 
@@ -723,8 +732,10 @@ function LiveMap() {
               setSelectedId(id)
               setFeedback('')
               setRoute(null)
+              setPendingRecommendation(null)
               setRisk(null)
               setGnnRisk(null)
+              setWhatIfResult(null)
             }}
             route={route}
             criterion={criterion}
