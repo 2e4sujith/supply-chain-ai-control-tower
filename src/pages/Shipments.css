@@ -278,27 +278,27 @@
 }
 
 .shipment-status.in-transit {
-    color: #60a5fa;
-    border-color: rgba(59, 130, 246, 0.3);
-    background: var(--color-blue-bg);
+    color: #0284c7;
+    border-color: #bae6fd;
+    background: #e0f2fe;
 }
 
 .shipment-status.delayed {
-    color: #f87171;
-    border-color: var(--color-red-border);
-    background: var(--color-red-bg);
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fee2e2;
 }
 
 .shipment-status.delivered {
-    color: #34d399;
-    border-color: var(--color-green-border);
-    background: var(--color-green-bg);
+    color: #16a34a;
+    border-color: #bbf7d0;
+    background: #dcfce7;
 }
 
 .shipment-status.booked {
-    color: #fbbf24;
-    border-color: var(--color-amber-border);
-    background: var(--color-amber-bg);
+    color: #d97706;
+    border-color: #fde68a;
+    background: #fef3c7;
 }
 
 .shipment-risk {
@@ -321,27 +321,27 @@
 }
 
 .shipment-risk.low {
-    color: #34d399;
-    background: var(--color-green-bg);
-    border: 1px solid var(--color-green-border);
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
 }
 
 .shipment-risk.medium {
-    color: #fbbf24;
-    background: var(--color-amber-bg);
-    border: 1px solid var(--color-amber-border);
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
 }
 
 .shipment-risk.high {
-    color: #fb923c;
-    background: rgba(249, 115, 22, 0.12);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    color: #c2410c;
+    background: #ffedd5;
+    border: 1px solid #fed7aa;
 }
 
 .shipment-risk.critical {
-    color: #f87171;
-    background: var(--color-red-bg);
-    border: 1px solid var(--color-red-border);
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
 }
 
 .empty-state {

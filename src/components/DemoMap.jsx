@@ -116,13 +116,6 @@ function getGeodesicSegment(lat1, lon1, lat2, lon2, numPoints = 16) {
   const c = 2 * Math.atan2(Math.sqrt(Math.max(0, a)), Math.sqrt(Math.max(0, 1 - a)))
   const distKm = R * c
 
-  if (distKm < 350) {
-    return [
-      [lat1, lon1],
-      [lat2, lon2],
-    ]
-  }
-
   const phi1 = toRad(lat1),
     lambda1 = toRad(lon1)
   const phi2 = toRad(lat2),
@@ -157,35 +150,56 @@ function getGeodesicSegment(lat1, lon1, lat2, lon2, numPoints = 16) {
   return points
 }
 
-// Fetch real road-following coordinates from public OSRM service with caching & timeout
-async function fetchOsrmSegment(lat1, lon1, lat2, lon2, signal) {
-  const distKm = calculateDistanceKm(lat1, lon1, lat2, lon2)
-  if (distKm > 800) {
-    return null
-  }
-
+// Fetch real road-following coordinates from backend geometry registry or public OSRM service with caching & timeout
+async function fetchOsrmSegment(lat1, lon1, lat2, lon2, originName, destName, signal) {
   const cacheKey = `${lat1.toFixed(4)},${lon1.toFixed(4)}_${lat2.toFixed(4)},${lon2.toFixed(4)}`
   if (osrmGeometryCache.has(cacheKey)) {
     return osrmGeometryCache.get(cacheKey)
   }
 
+  // 1. Try backend road geometry endpoint first (precomputed 38 verified corridors, 0ms)
+  try {
+    const backendRes = await fetch('/api/routes/geometry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origin: originName || '',
+        destination: destName || '',
+        origin_lat: lat1,
+        origin_lon: lon1,
+        dest_lat: lat2,
+        dest_lon: lon2,
+      }),
+      signal,
+    })
+    if (backendRes.ok) {
+      const data = await backendRes.json()
+      if (data?.coordinates && data.coordinates.length > 2) {
+        osrmGeometryCache.set(cacheKey, data.coordinates)
+        return data.coordinates
+      }
+    }
+  } catch (_e) {
+    // Continue to OSRM fallback
+  }
+
+  // 2. Direct OSRM public service fallback
   const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`
   try {
     const res = await fetch(url, { signal })
-    if (!res.ok) return null
-    const data = await res.json()
-    if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
-      const coords = data.routes[0].geometry.coordinates
-      const lastLat = coords[coords.length - 1][1]
-      const lastLon = coords[coords.length - 1][0]
-      if (calculateDistanceKm(lastLat, lastLon, lat2, lon2) < 50) {
+    if (res.ok) {
+      const data = await res.json()
+      if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
+        const coords = data.routes[0].geometry.coordinates
         const latLngs = coords.map(([lon, lat]) => [lat, lon])
-        osrmGeometryCache.set(cacheKey, latLngs)
-        return latLngs
+        if (latLngs.length > 2) {
+          osrmGeometryCache.set(cacheKey, latLngs)
+          return latLngs
+        }
       }
     }
   } catch (_err) {
-    return null
+    // Fallback
   }
   return null
 }
@@ -277,7 +291,7 @@ async function buildAsynchronousRoutePolyline(nodesWithCoords, routeSegments, si
     if (isRoad) {
       hasRoadSegments = true
       segmentPromises.push(
-        fetchOsrmSegment(p1.lat, p1.lon, p2.lat, p2.lon, signal).then((roadPts) => {
+        fetchOsrmSegment(p1.lat, p1.lon, p2.lat, p2.lon, n1.name, n2.name, signal).then((roadPts) => {
           if (roadPts && roadPts.length >= 2) return roadPts
           return getGeodesicSegment(p1.lat, p1.lon, p2.lat, p2.lon, 16)
         })
@@ -393,7 +407,7 @@ function DemoMap({
   const layersGroupRef = useRef(null)
   const lastFitKeyRef = useRef('')
   const [currentZoom, setCurrentZoom] = useState(4)
-  const [mapStyle, setMapStyle] = useState('osm')
+  const [mapStyle, setMapStyle] = useState('voyager')
   const [showAllShipments, setShowAllShipments] = useState(true)
   const [isRoadLoading, setIsRoadLoading] = useState(false)
   const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
@@ -551,7 +565,7 @@ function DemoMap({
   )
 
   const [geometryPoints, setGeometryPoints] = useState(() => {
-    const backendGeo = isMatchingShipment && route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    const backendGeo = isMatchingShipment && route?.route_geometry && route.route_geometry.length > 2 ? route.route_geometry : null
     const segs = isMatchingShipment ? route?.segments : null
     return {
       current: buildSynchronousRoutePolyline(currentNodesWithCoords, segs),
@@ -569,7 +583,7 @@ function DemoMap({
     const isMatch = Boolean(
       route && (!route.shipment_id || !shipment?.id || route.shipment_id === shipment.id)
     )
-    const activeRouteGeo = isMatch && route?.route_geometry && route.route_geometry.length >= 2 ? route.route_geometry : null
+    const activeRouteGeo = isMatch && route?.route_geometry && route.route_geometry.length > 2 ? route.route_geometry : null
     const activeSegments = isMatch ? route?.segments : null
 
     // If backend provided high-precision road route_geometry (length >= 2)

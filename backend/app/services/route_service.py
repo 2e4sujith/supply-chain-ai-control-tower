@@ -973,15 +973,64 @@ async def compute_path_geometry(path: list[str]) -> list[list[float]]:
     return full_geometry
 
 
+def _calc_geodesic_arc(lat1: float, lon1: float, lat2: float, lon2: float, num_points: int = 24) -> list[list[float]]:
+    """Generate smooth great-circle geodesic curve points between two coordinates."""
+    import math
+    phi1, lam1 = math.radians(lat1), math.radians(lon1)
+    phi2, lam2 = math.radians(lat2), math.radians(lon2)
+    d = math.acos(max(-1.0, min(1.0, math.sin(phi1)*math.sin(phi2) + math.cos(phi1)*math.cos(phi2)*math.cos(lam2 - lam1))))
+    if d < 1e-6 or math.isnan(d):
+        return [[lat1, lon1], [lat2, lon2]]
+    pts = []
+    for i in range(num_points + 1):
+        f = i / num_points
+        A = math.sin((1.0 - f) * d) / math.sin(d)
+        B = math.sin(f * d) / math.sin(d)
+        x = A * math.cos(phi1) * math.cos(lam1) + B * math.cos(phi2) * math.cos(lam2)
+        y = A * math.cos(phi1) * math.sin(lam1) + B * math.cos(phi2) * math.sin(lam2)
+        z = A * math.sin(phi1) + B * math.sin(phi2)
+        lat = math.degrees(math.atan2(z, math.sqrt(x*x + y*y)))
+        lon = math.degrees(math.atan2(y, x))
+        pts.append([round(lat, 5), round(lon, 5)])
+    return pts
+
+
 def compute_path_geometry_sync(path: list[str]) -> list[list[float]]:
-    """Synchronous instant node coordinate path geometry."""
+    """Synchronous instant road-following highway path geometry from verified OSRM registry or great-circle arc."""
     if not path or len(path) < 2:
         return []
-    coords = [route_network.get_node_coordinates(n) for n in path]
-    valid_coords = [c for c in coords if c and "lat" in c and "lon" in c]
-    if len(valid_coords) < 2:
-        return [[c["lat"], c["lon"]] for c in valid_coords]
-    return [[c["lat"], c["lon"]] for c in valid_coords]
+
+    try:
+        from app.routing.road_geometries import get_precomputed_road_geometry
+    except Exception:
+        get_precomputed_road_geometry = None
+
+    full_coords: list[list[float]] = []
+    for i in range(len(path) - 1):
+        u = path[i]
+        v = path[i + 1]
+        road_pts = get_precomputed_road_geometry(u, v) if get_precomputed_road_geometry else None
+        if road_pts and len(road_pts) >= 2:
+            if full_coords and road_pts and full_coords[-1] == road_pts[0]:
+                full_coords.extend(road_pts[1:])
+            elif full_coords:
+                full_coords.extend(road_pts)
+            else:
+                full_coords.extend(road_pts)
+        else:
+            # Generate geodesic great-circle curve for ocean or long corridors
+            c1 = route_network.get_node_coordinates(u)
+            c2 = route_network.get_node_coordinates(v)
+            if c1 and c2:
+                seg = _calc_geodesic_arc(c1["lat"], c1["lon"], c2["lat"], c2["lon"], num_points=24)
+                if full_coords and full_coords[-1] == seg[0]:
+                    full_coords.extend(seg[1:])
+                elif full_coords:
+                    full_coords.extend(seg)
+                else:
+                    full_coords.extend(seg)
+
+    return full_coords if len(full_coords) >= 2 else []
 
 
 class RouteService:
@@ -1006,20 +1055,21 @@ class RouteService:
         dest_node = self.network._normalize_node_name(dest_str)
 
         # 1. Obtain real-time ML risk prediction for the shipment
-        ml_risk_score = None
-        ml_risk_level = "LOW"
-        try:
-            from app.services.risk_service import risk_service
-            from app.schemas.predictions import RiskPredictionRequest
+        ml_risk_score = shipment.get("risk_score")
+        ml_risk_level = str(shipment.get("risk_level", "LOW")).upper()
+        if ml_risk_score is None:
+            try:
+                from app.services.risk_service import risk_service
+                from app.schemas.predictions import RiskPredictionRequest
 
-            pred_req = RiskPredictionRequest(shipment_id=shipment_id, origin=orig_node, destination=dest_node)
-            pred_resp = risk_service.predict_risk(pred_req)
-            if pred_resp:
-                ml_risk_score = pred_resp.risk_score
-                ml_risk_level = pred_resp.risk_level
-        except Exception:
-            ml_risk_score = shipment.get("risk_score", 45)
-            ml_risk_level = shipment.get("risk_level", "Medium").upper()
+                pred_req = RiskPredictionRequest(shipment_id=shipment_id, origin=orig_node, destination=dest_node)
+                pred_resp = risk_service.predict_risk(pred_req)
+                if pred_resp:
+                    ml_risk_score = pred_resp.risk_score
+                    ml_risk_level = pred_resp.risk_level
+            except Exception:
+                ml_risk_score = 45
+                ml_risk_level = "MEDIUM"
 
         # 2. Baseline primary route: calculate baseline scheduled path (least time)
         try:

@@ -135,5 +135,22 @@ class WhatIfSimulationResponse(BaseModel):
     parameter_adjustments: dict[str, Any]
 
 
+class RouteGeometryRequest(BaseModel):
+    origin: str
+    destination: str
+    origin_lat: Optional[float] = None
+    origin_lon: Optional[float] = None
+    dest_lat: Optional[float] = None
+    dest_lon: Optional[float] = None
+    mode: Optional[str] = "driving"
+
+
+class RouteGeometryResponse(BaseModel):
+    coordinates: list[list[float]]
+    distance_km: float
+    duration_hours: float
+    source: str = "OSRM"
+
+
 
 
