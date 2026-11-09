@@ -218,10 +218,12 @@ function Home() {
         <Suspense fallback={<SceneFallback message="Initialising 3D Planetary Logistics Engine..." />}>
           <SupplyChainGlobe
             shipments={shipments}
+            alerts={alerts}
             onSelectShipment={(id) => navigate(`/shipments/${id}`)}
-            height="520px"
+            onNavigateMap={(id) => navigate(`/map?shipmentId=${id}`)}
+            height="550px"
             title="Global Multimodal Digital Twin"
-            subtitle="Real-time 3D planetary tracking of maritime, rail, and highway freight corridors"
+            subtitle="Interactive 3D tracking of maritime, rail, and highway freight corridors"
           />
         </Suspense>
       </section>

@@ -19,12 +19,15 @@ import {
   Route as RouteIcon,
   ShieldAlert,
 } from 'lucide-react'
+import HolographicShipmentPanel from './HolographicShipmentPanel.jsx'
 import './SupplyChainGlobe.css'
 
 export default function SupplyChainGlobe({
   shipments = [],
+  alerts = [],
   selectedShipmentId = null,
   onSelectShipment,
+  onNavigateMap,
   compact = false,
   height = '490px',
   title = 'Global Logistics Digital Twin',
@@ -34,6 +37,8 @@ export default function SupplyChainGlobe({
   const canvasRef = useRef(null)
 
   // Interactive UI State
+  const [selectedShipment, setSelectedShipment] = useState(null)
+  const [hoveredRouteShipmentId, setHoveredRouteShipmentId] = useState(null)
   const [autoRotate, setAutoRotate] = useState(true)
   const [showRings, setShowRings] = useState(true)
   const [hoveredInfo, setHoveredInfo] = useState(null)
@@ -56,8 +61,18 @@ export default function SupplyChainGlobe({
   // Drag interaction state
   const isDraggingRef = useRef(false)
   const previousMousePositionRef = useRef({ x: 0, y: 0 })
+  const pointerDownPosRef = useRef({ x: 0, y: 0 })
+  const dragDistanceRef = useRef(0)
   const rotationVelocityRef = useRef({ x: 0, y: 0.0015 })
   const userInteractedTimeoutRef = useRef(null)
+
+  // Synchronize internal selectedShipment if external selectedShipmentId changes
+  useEffect(() => {
+    if (selectedShipmentId) {
+      const found = shipments.find((s) => s.id === selectedShipmentId)
+      if (found) setSelectedShipment(found)
+    }
+  }, [selectedShipmentId, shipments])
 
   // Check WebGL availability
   const checkWebGL = useCallback(() => {
@@ -428,7 +443,7 @@ export default function SupplyChainGlobe({
       })
 
       const lineMesh = new THREE.Line(curveGeometry, lineMaterial)
-      lineMesh.userData = { shipmentId: shipment.id, shipment }
+      lineMesh.userData = { shipmentId: shipment.id, shipment, baseColor: colorHex }
       routesGroup.add(lineMesh)
 
       // Dynamic Animated Shipment Particle moving Origin -> Destination
@@ -437,6 +452,7 @@ export default function SupplyChainGlobe({
         color: isSelected ? 0xffffff : colorHex,
       })
       const particleMesh = new THREE.Mesh(particleGeometry, particleMaterial)
+      particleMesh.userData = { shipmentId: shipment.id, shipment, isParticle: true, baseColor: colorHex }
       routesGroup.add(particleMesh)
 
       particlesRef.current.push({
@@ -479,10 +495,64 @@ export default function SupplyChainGlobe({
     })
   }, [shipments, selectedShipmentId, activeFilter, showRings, resolveCoord])
 
+  // Dynamically highlight 3D routes on hover and selection
+  useEffect(() => {
+    const routesGroup = routesGroupRef.current
+    if (!routesGroup) return
+
+    const activeId = selectedShipment?.id
+    const hoveredId = hoveredRouteShipmentId
+    const isAnyActive = Boolean(activeId || hoveredId)
+
+    routesGroup.children.forEach((child) => {
+      const u = child.userData
+      if (!u || !u.shipmentId) return
+
+      const isSelected = u.shipmentId === activeId
+      const isHovered = u.shipmentId === hoveredId
+
+      if (child.isLine) {
+        if (isSelected) {
+          child.material.color.setHex(0x00f0ff) // Vibrant Neon Cyan
+          child.material.opacity = 1.0
+          child.renderOrder = 10
+        } else if (isHovered) {
+          child.material.color.setHex(0xffffff) // Pure White Glow on hover
+          child.material.opacity = 1.0
+          child.renderOrder = 9
+        } else if (isAnyActive) {
+          child.material.color.setHex(u.baseColor || 0x25d9f8)
+          child.material.opacity = 0.22 // Subtly dim background routes
+          child.renderOrder = 1
+        } else {
+          child.material.color.setHex(u.baseColor || 0x25d9f8)
+          child.material.opacity = 0.65
+          child.renderOrder = 2
+        }
+      } else if (u.isParticle) {
+        if (isSelected) {
+          child.material.color.setHex(0x00f0ff)
+          child.scale.set(2.0, 2.0, 2.0)
+        } else if (isHovered) {
+          child.material.color.setHex(0xffffff)
+          child.scale.set(1.7, 1.7, 1.7)
+        } else if (isAnyActive) {
+          child.material.color.setHex(u.baseColor || 0x25d9f8)
+          child.scale.set(0.85, 0.85, 0.85)
+        } else {
+          child.material.color.setHex(u.baseColor || 0x25d9f8)
+          child.scale.set(1.0, 1.0, 1.0)
+        }
+      }
+    })
+  }, [selectedShipment, hoveredRouteShipmentId])
+
   // Mouse & Touch Interaction Handlers
   const handlePointerDown = (e) => {
     isDraggingRef.current = true
     previousMousePositionRef.current = { x: e.clientX, y: e.clientY }
+    pointerDownPosRef.current = { x: e.clientX, y: e.clientY }
+    dragDistanceRef.current = 0
     if (userInteractedTimeoutRef.current) {
       clearTimeout(userInteractedTimeoutRef.current)
     }
@@ -496,6 +566,7 @@ export default function SupplyChainGlobe({
     if (isDraggingRef.current && globeGroupRef.current) {
       const deltaX = e.clientX - previousMousePositionRef.current.x
       const deltaY = e.clientY - previousMousePositionRef.current.y
+      dragDistanceRef.current += Math.hypot(deltaX, deltaY)
 
       globeGroupRef.current.rotation.y += deltaX * 0.005
       globeGroupRef.current.rotation.x += deltaY * 0.005
@@ -508,21 +579,50 @@ export default function SupplyChainGlobe({
 
       rotationVelocityRef.current = { x: deltaY * 0.0008, y: deltaX * 0.0008 }
       previousMousePositionRef.current = { x: e.clientX, y: e.clientY }
+      container.style.cursor = 'grabbing'
+      setHoveredInfo(null)
+      return
     }
 
-    // 2. Raycasting for Tooltip Hover
-    if (!isDraggingRef.current && cameraRef.current && sceneRef.current) {
+    // 2. Raycasting for Tooltip Hover & Route Highlighting
+    if (cameraRef.current && sceneRef.current) {
       const rect = container.getBoundingClientRect()
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
 
       const raycaster = new THREE.Raycaster()
-      raycaster.params.Line = { threshold: 0.08 }
+      raycaster.params.Line = { threshold: 0.18 }
       raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current)
 
       const routeIntersects = raycaster.intersectObjects(
-        routesGroupRef.current ? routesGroupRef.current.children : []
+        routesGroupRef.current ? routesGroupRef.current.children : [],
+        true
       )
+      const routeHit = routeIntersects.find(
+        (hit) => hit.object && hit.object.userData && hit.object.userData.shipment
+      )
+
+      if (routeHit) {
+        const s = routeHit.object.userData.shipment
+        setHoveredRouteShipmentId(s.id)
+        container.style.cursor = 'pointer'
+        setHoveredInfo({
+          type: 'SHIPMENT',
+          id: s.id,
+          origin: s.origin,
+          destination: s.destination,
+          risk: s.risk,
+          riskScore: s.riskScore,
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+          interactive: true,
+        })
+        return
+      }
+
+      setHoveredRouteShipmentId(null)
+      container.style.cursor = 'grab'
+
       const hubIntersects = raycaster.intersectObjects(
         hubsGroupRef.current ? hubsGroupRef.current.children : []
       )
@@ -536,18 +636,6 @@ export default function SupplyChainGlobe({
           x: e.clientX - rect.left,
           y: e.clientY - rect.top,
         })
-      } else if (routeIntersects.length > 0 && routeIntersects[0].object.userData.shipment) {
-        const s = routeIntersects[0].object.userData.shipment
-        setHoveredInfo({
-          type: 'SHIPMENT',
-          id: s.id,
-          origin: s.origin,
-          destination: s.destination,
-          risk: s.risk,
-          riskScore: s.riskScore,
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        })
       } else {
         setHoveredInfo(null)
       }
@@ -556,10 +644,16 @@ export default function SupplyChainGlobe({
 
   const handlePointerUp = () => {
     isDraggingRef.current = false
+    if (containerRef.current) {
+      containerRef.current.style.cursor = hoveredRouteShipmentId ? 'pointer' : 'grab'
+    }
   }
 
   // Click on hub or corridor
   const handleClick = (e) => {
+    // If the mouse dragged more than 6px, ignore click (it was a rotation drag)
+    if (dragDistanceRef.current > 6) return
+
     const container = containerRef.current
     if (!container || !cameraRef.current) return
 
@@ -568,18 +662,24 @@ export default function SupplyChainGlobe({
     const y = -((e.clientY - rect.top) / rect.height) * 2 + 1
 
     const raycaster = new THREE.Raycaster()
-    raycaster.params.Line = { threshold: 0.1 }
+    raycaster.params.Line = { threshold: 0.20 }
     raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current)
 
     const routeIntersects = raycaster.intersectObjects(
-      routesGroupRef.current ? routesGroupRef.current.children : []
+      routesGroupRef.current ? routesGroupRef.current.children : [],
+      true
+    )
+    const routeHit = routeIntersects.find(
+      (hit) => hit.object && hit.object.userData && hit.object.userData.shipment
     )
 
-    if (routeIntersects.length > 0 && routeIntersects[0].object.userData.shipmentId) {
-      const sId = routeIntersects[0].object.userData.shipmentId
-      if (onSelectShipment) {
-        onSelectShipment(sId)
-      }
+    if (routeHit) {
+      const s = routeHit.object.userData.shipment
+      // Smoothly select or toggle shipment
+      setSelectedShipment(s)
+    } else {
+      // Clicked on empty space or globe surface -> deselect and close panel
+      setSelectedShipment(null)
     }
   }
 
@@ -724,13 +824,41 @@ export default function SupplyChainGlobe({
                     {hoveredInfo.risk} Risk ({hoveredInfo.riskScore}/100)
                   </span>
                 </div>
+                {hoveredInfo.interactive && (
+                  <div className="tooltip-cta-row">
+                    <span>✦ Click route to inspect in AI Holographic Panel</span>
+                  </div>
+                )}
               </>
             )}
           </div>
         )}
 
+        {/* Holographic AI Shipment Information Panel */}
+        {selectedShipment && (
+          <HolographicShipmentPanel
+            shipment={selectedShipment}
+            alerts={alerts}
+            onClose={() => setSelectedShipment(null)}
+            onNavigateDossier={(id) => {
+              if (onSelectShipment) {
+                onSelectShipment(id)
+              } else if (typeof window !== 'undefined') {
+                window.location.href = `/shipments/${id}`
+              }
+            }}
+            onNavigateMap={(id) => {
+              if (onNavigateMap) {
+                onNavigateMap(id)
+              } else if (typeof window !== 'undefined') {
+                window.location.href = `/map?shipmentId=${id}`
+              }
+            }}
+          />
+        )}
+
         {/* Bottom Status Overlay */}
-        <div className="globe-overlay-status">
+        <div className={`globe-overlay-status ${selectedShipment ? 'panel-open' : ''}`}>
           <div className="stat-pill">
             <span className="dot cyan" />
             <span>Active Corridors: <strong>{shipments.length}</strong></span>

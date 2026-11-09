@@ -221,6 +221,18 @@
 .risk-pill.medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .risk-pill.low { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
 
+.tooltip-cta-row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(56, 189, 248, 0.3);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-cyan, #25d9f8);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Bottom Status Overlay */
 .globe-overlay-status {
   position: absolute;
@@ -233,6 +245,17 @@
   pointer-events: none;
   flex-wrap: wrap;
   gap: 8px;
+  transition: right 0.3s ease;
+}
+
+.globe-overlay-status.panel-open {
+  right: 400px;
+}
+
+@media (max-width: 992px) {
+  .globe-overlay-status.panel-open {
+    display: none;
+  }
 }
 
 .stat-pill {
