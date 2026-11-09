@@ -10,6 +10,10 @@ export function getApiBaseUrl() {
         if (host === 'localhost' || host === '127.0.0.1') {
             return `http://${host}:8000`
         }
+        // When accessed via public tunnel or reverse-proxy gateway, route /api through same-origin proxy
+        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
+            return window.location.origin
+        }
         return DEFAULT_PROD_API_URL
     }
     return DEFAULT_PROD_API_URL
@@ -25,6 +29,14 @@ export function getWsUrl() {
             wsUrl = wsUrl.replace(/^https:\/\//, 'wss://')
         }
         return wsUrl.replace(/\/$/, '')
+    }
+
+    if (typeof window !== 'undefined' && window.location) {
+        const host = window.location.hostname
+        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+            return `${proto}//${window.location.host}/ws`
+        }
     }
 
     const apiBase = getApiBaseUrl()
