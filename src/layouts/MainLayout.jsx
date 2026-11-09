@@ -128,6 +128,26 @@ function MainLayout() {
     }
   }
 
+  // Initialize theme
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('sc_theme') || 'light'
+    let effective = savedTheme
+    if (savedTheme === 'system') {
+      effective = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    document.documentElement.setAttribute('data-theme', effective)
+
+    const handleStorage = (e) => {
+      if (e.key === 'sc_theme') {
+        const t = e.newValue || 'light'
+        const eff = t === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t
+        document.documentElement.setAttribute('data-theme', eff)
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
+
   return (
     <div className={`app-shell ${userProfile.compact_density ? 'compact-mode' : ''}`}>
       <aside className="sidebar">
@@ -181,9 +201,9 @@ function MainLayout() {
               />
             </form>
 
-            <span className={`live-connection-badge ${liveConnected ? 'connected' : 'disconnected'}`} title={liveConnected ? 'Real-time WebSocket telemetry streaming' : 'WebSocket offline - fallback polling active'}>
+            <span className={`live-connection-badge ${liveConnected ? 'connected' : 'disconnected'}`} title={liveConnected ? 'Real-time WebSocket telemetry connected' : 'WebSocket offline - fallback polling active'}>
               <span className="live-dot" />
-              {liveConnected ? 'LIVE STREAM' : 'OFFLINE MODE'}
+              {liveConnected ? 'LIVE' : 'OFFLINE'}
             </span>
 
             {/* Notifications Bell & Dropdown */}

@@ -9,10 +9,13 @@ import {
   Globe,
   HardDrive,
   Monitor,
+  Moon,
   RefreshCw,
+  Save,
   Server,
   Shield,
   SlidersHorizontal,
+  Sun,
   Zap,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -28,7 +31,7 @@ import './Settings.css'
 const sections = [
   { label: 'Profile', icon: CircleUserRound },
   { label: 'Notifications', icon: Bell },
-  { label: 'Display', icon: Monitor },
+  { label: 'Display & Theme', icon: Monitor },
   { label: 'System', icon: Server },
   { label: 'API Configuration', icon: SlidersHorizontal },
 ]
@@ -37,6 +40,7 @@ function Settings() {
   const [activeSection, setActiveSection] = useState('Profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState(null)
 
@@ -48,7 +52,7 @@ function Settings() {
     email_alerts: true,
     daily_digest: false,
     compact_density: false,
-    theme: 'dark',
+    theme: localStorage.getItem('sc_theme') || 'light',
   })
 
   const [systemConfig, setSystemConfig] = useState(null)
@@ -61,6 +65,7 @@ function Settings() {
     try {
       const data = await getSettings()
       if (data) {
+        const activeTheme = localStorage.getItem('sc_theme') || data.theme || 'light'
         setFormData({
           display_name: data.display_name || 'Alex Morgan',
           email: data.email || 'alex.morgan@supplychain.ai',
@@ -69,7 +74,7 @@ function Settings() {
           email_alerts: Boolean(data.email_alerts),
           daily_digest: Boolean(data.daily_digest),
           compact_density: Boolean(data.compact_density),
-          theme: data.theme || 'dark',
+          theme: activeTheme,
           updated_at: data.updated_at
         })
         if (data.compact_density) {
@@ -111,9 +116,21 @@ function Settings() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleThemeChange = (newTheme) => {
+    setFormData((prev) => ({ ...prev, theme: newTheme }))
+    localStorage.setItem('sc_theme', newTheme)
+    let effective = newTheme
+    if (newTheme === 'system') {
+      effective = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    document.documentElement.setAttribute('data-theme', effective)
+    window.dispatchEvent(new Event('themechange'))
+  }
+
   const handleSave = async (e) => {
     if (e) e.preventDefault()
     setSaving(true)
+    setJustSaved(false)
     setError('')
     setToast(null)
     try {
@@ -127,7 +144,7 @@ function Settings() {
           email_alerts: Boolean(updated.email_alerts),
           daily_digest: Boolean(updated.daily_digest),
           compact_density: Boolean(updated.compact_density),
-          theme: updated.theme || 'dark',
+          theme: updated.theme || formData.theme || 'light',
           updated_at: updated.updated_at
         })
         if (updated.compact_density) {
@@ -137,6 +154,8 @@ function Settings() {
         }
         setError('')
       }
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 3500)
       setToast({
         type: 'success',
         message: 'Settings saved successfully to PostgreSQL database.',
@@ -311,9 +330,66 @@ function Settings() {
                 </div>
               )}
 
-              {/* Display Section */}
-              {activeSection === 'Display' && (
+              {/* Display & Appearance Section */}
+              {activeSection === 'Display & Theme' && (
                 <div className="settings-content">
+                  <div className="settings-subheading">
+                    <h3>Appearance & Theme</h3>
+                    <p>Select your preferred color theme across the entire Control Tower workspace.</p>
+                  </div>
+
+                  <div className="theme-selector-grid">
+                    <button
+                      type="button"
+                      className={`theme-card ${formData.theme === 'light' ? 'active' : ''}`}
+                      onClick={() => handleThemeChange('light')}
+                    >
+                      <div className="theme-card-icon sun">
+                        <Sun size={20} />
+                      </div>
+                      <div className="theme-card-info">
+                        <strong>Light Mode</strong>
+                        <span>Bright, modern enterprise workspace (Default)</span>
+                      </div>
+                      {formData.theme === 'light' && <span className="theme-check-badge"><Check size={13} /> Active</span>}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`theme-card ${formData.theme === 'dark' ? 'active' : ''}`}
+                      onClick={() => handleThemeChange('dark')}
+                    >
+                      <div className="theme-card-icon moon">
+                        <Moon size={20} />
+                      </div>
+                      <div className="theme-card-info">
+                        <strong>Dark Mode</strong>
+                        <span>Deep contrast Control Tower interface</span>
+                      </div>
+                      {formData.theme === 'dark' && <span className="theme-check-badge"><Check size={13} /> Active</span>}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`theme-card ${formData.theme === 'system' ? 'active' : ''}`}
+                      onClick={() => handleThemeChange('system')}
+                    >
+                      <div className="theme-card-icon monitor">
+                        <Monitor size={20} />
+                      </div>
+                      <div className="theme-card-info">
+                        <strong>System Default</strong>
+                        <span>Synchronize automatically with OS settings</span>
+                      </div>
+                      {formData.theme === 'system' && <span className="theme-check-badge"><Check size={13} /> Active</span>}
+                    </button>
+                  </div>
+
+                  <div className="settings-subheading" style={{ marginTop: '28px' }}>
+                    <h3>Layout & Density</h3>
+                    <p>Configure screen real estate optimization and data spacing.</p>
+                  </div>
+
                   <div className="toggle-list">
                     <div className="toggle-item-row">
                       <div className="toggle-info">
@@ -328,14 +404,6 @@ function Settings() {
                       >
                         <span />
                       </button>
-                    </div>
-
-                    <div className="toggle-item-row">
-                      <div className="toggle-info">
-                        <strong>Color Theme</strong>
-                        <p>Enterprise Control Tower Dark Mode (Active Default).</p>
-                      </div>
-                      <span className="theme-pill-badge">Dark Mode (Default)</span>
                     </div>
                   </div>
                 </div>
@@ -427,17 +495,24 @@ function Settings() {
                 </span>
                 <button
                   type="button"
-                  className="save-changes-btn"
+                  className={`save-changes-btn ${saving ? 'saving' : ''} ${justSaved ? 'saved' : ''}`}
                   onClick={handleSave}
                   disabled={saving}
                 >
                   {saving ? (
                     <>
-                      <RefreshCw size={13} className="loading-spin" /> Saving...
+                      <RefreshCw size={15} className="loading-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : justSaved ? (
+                    <>
+                      <CheckCircle2 size={15} />
+                      <span>Saved Successfully!</span>
                     </>
                   ) : (
                     <>
-                      <Check size={13} /> Save Changes
+                      <Save size={15} />
+                      <span>Save Changes</span>
                     </>
                   )}
                 </button>

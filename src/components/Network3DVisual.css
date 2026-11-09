@@ -1,16 +1,17 @@
 /* ==========================================================================
-   Network3DVisual Component — 3D Graph Neural Network Topology Canvas
+   Network3DVisual Component — Upgraded 3D Graph Neural Network Topology Canvas
    ========================================================================== */
 
 .network-3d-card {
-  background: #101726;
-  border: 1px solid #223048;
-  border-radius: 10px;
-  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 22px 24px;
   margin-bottom: 28px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
+  transition: all 0.2s ease;
 }
 
 .network-3d-card::before {
@@ -19,82 +20,127 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #10b981, #38bdf8, #8b5cf6);
-  opacity: 0.8;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981, #0284c7, #8b5cf6, #f59e0b);
+  opacity: 0.9;
 }
 
 .network-3d-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: 16px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .network-3d-title-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+}
+
+.network-3d-headings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.network-3d-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
 }
 
 .network-3d-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 3px 9px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 5px 11px;
   border-radius: 6px;
-  color: #34d399;
+  color: #10b981;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+}
+
+[data-theme="dark"] .network-3d-pill {
+  color: #34d399;
 }
 
 .network-3d-subtitle {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
 }
 
-.network-3d-toggle {
+.network-3d-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.network-3d-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #162032;
-  border: 1px solid #223048;
-  border-radius: 6px;
-  padding: 4px 10px;
-  color: #8493a8;
-  font-size: 11px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.network-3d-toggle:hover {
-  background: #1e293b;
-  color: #ffffff;
+.network-3d-btn:hover {
+  background: var(--bg-card);
+  color: var(--color-cyan);
+  border-color: var(--color-cyan);
 }
 
-.network-3d-toggle.active {
+.network-3d-btn.active {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+[data-theme="dark"] .network-3d-btn.active {
   color: #34d399;
-  border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.12);
 }
 
+.network-3d-zoom-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-card);
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   Canvas & 3D Stage (Enlarged to 420px Height)
+   ========================================================================== */
 .network-3d-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 240px;
-  background: radial-gradient(circle at center, #131c30 0%, #0a0f1c 100%);
-  border: 1px solid #1a2538;
-  border-radius: 8px;
+  height: 420px;
+  background: radial-gradient(circle at 50% 45%, #182236 0%, #0a0f1d 100%);
+  border: 1px solid #1e293b;
+  border-radius: 12px;
   overflow: hidden;
   cursor: grab;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .network-3d-canvas-wrapper:active {
@@ -109,56 +155,199 @@
 
 .network-3d-hint {
   position: absolute;
-  bottom: 8px;
-  right: 12px;
-  font-size: 10px;
-  color: #64748b;
+  bottom: 12px;
+  right: 14px;
+  font-size: 11px;
+  color: #94a3b8;
   font-family: 'JetBrains Mono', monospace;
   pointer-events: none;
-  background: rgba(10, 15, 28, 0.7);
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: rgba(10, 15, 29, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
 }
 
+/* Floating Node Inspector */
+.network-3d-floating-inspector {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(11, 16, 28, 0.92);
+  border: 1px solid #38bdf8;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.15s ease-out;
+  max-width: 320px;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.inspector-header strong {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.inspector-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.inspector-dot.india { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.8); }
+.inspector-dot.asia { background: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.8); }
+.inspector-dot.europe { background: #c084fc; box-shadow: 0 0 8px rgba(192, 132, 252, 0.8); }
+.inspector-dot.na { background: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.8); }
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-body > span {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.inspector-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspector-risk-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.inspector-risk-tag.critical {
+  background: rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+.inspector-risk-tag.high {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.inspector-risk-tag.medium {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.inspector-risk-tag.low {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.inspector-degree-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ==========================================================================
+   Explanation Callout Banner
+   ========================================================================== */
+.network-3d-explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.explanation-icon {
+  color: var(--color-blue);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.network-3d-explanation p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.network-3d-explanation strong {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Legend Bar
+   ========================================================================== */
 .network-3d-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 12px;
+  gap: 18px;
+  margin-top: 14px;
   flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .n3d-legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #94a3b8;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .n3d-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .n3d-dot.india {
-  background: #34d399;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+  background: #16a34a;
+  box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
 }
 
 .n3d-dot.asia {
-  background: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+  background: #0284c7;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
 }
 
 .n3d-dot.europe {
-  background: #c084fc;
-  box-shadow: 0 0 6px rgba(192, 132, 252, 0.6);
+  background: #7c3aed;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.6);
 }
 
 .n3d-dot.na {
-  background: #fbbf24;
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+  background: #d97706;
+  box-shadow: 0 0 6px rgba(217, 119, 6, 0.6);
 }
+
+[data-theme="dark"] .n3d-dot.india { background: #34d399; }
+[data-theme="dark"] .n3d-dot.asia { background: #38bdf8; }
+[data-theme="dark"] .n3d-dot.europe { background: #c084fc; }
+[data-theme="dark"] .n3d-dot.na { background: #fbbf24; }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AddShipmentModal from '../components/AddShipmentModal.jsx'
@@ -22,6 +22,7 @@ function Shipments() {
   const [error, setError] = useState('')
   const [modalError, setModalError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -111,6 +112,11 @@ function Shipments() {
         return [created, ...current]
       })
       setIsModalOpen(false)
+      setToast({
+        type: 'success',
+        message: `Shipment ${created.id} registered successfully on corridor ${created.origin} → ${created.destination}.`,
+      })
+      setTimeout(() => setToast(null), 5000)
     } catch (err) {
       setModalError(err.message || 'Unable to create shipment.')
     } finally {
@@ -144,6 +150,14 @@ function Shipments() {
           <Plus size={17} /> Add Shipment
         </button>
       </section>
+
+      {toast && (
+        <div className="settings-toast success" style={{ marginBottom: '18px' }}>
+          <CheckCircle2 size={16} />
+          <span>{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss">×</button>
+        </div>
+      )}
 
       {error && (
         <div className="inline-error">

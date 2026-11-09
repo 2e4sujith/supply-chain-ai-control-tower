@@ -187,3 +187,191 @@ a {
         transform: translateY(0);
     }
 }
+
+/* ==========================================================================
+   Dark Mode Theme System ([data-theme="dark"])
+   Preserves high contrast, vibrant status colors, and sleek Control Tower aesthetic.
+   ========================================================================== */
+[data-theme="dark"] {
+    --bg-app: #080C14;
+    --bg-sidebar: #0B101C;
+    --bg-topbar: rgba(11, 16, 28, 0.92);
+    --bg-card: #101726;
+    --bg-card-elevated: #162032;
+    --bg-card-hover: #1A263D;
+    --bg-input: #0D1422;
+
+    --border-subtle: #1C273C;
+    --border-card: #223048;
+    --border-active: #25D9F8;
+    --border-glow: rgba(37, 217, 248, 0.35);
+
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #8493A8;
+    --text-dim: #54657E;
+
+    --color-cyan: #25D9F8;
+    --color-cyan-bg: rgba(37, 217, 248, 0.12);
+    --color-cyan-border: rgba(37, 217, 248, 0.3);
+
+    --color-blue: #3B82F6;
+    --color-blue-bg: rgba(59, 130, 246, 0.12);
+    --color-blue-border: rgba(59, 130, 246, 0.3);
+
+    --color-purple: #8B5CF6;
+    --color-purple-bg: rgba(139, 92, 246, 0.12);
+    --color-purple-border: rgba(139, 92, 246, 0.3);
+
+    --color-green: #22C55E;
+    --color-green-bg: rgba(34, 197, 94, 0.12);
+    --color-green-border: rgba(34, 197, 94, 0.3);
+
+    --color-amber: #F59E0B;
+    --color-amber-bg: rgba(245, 158, 11, 0.12);
+    --color-amber-border: rgba(245, 158, 11, 0.3);
+
+    --color-red: #F43F5E;
+    --color-red-bg: rgba(244, 63, 94, 0.12);
+    --color-red-border: rgba(244, 63, 94, 0.3);
+
+    --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.38);
+    --shadow-elevated: 0 10px 32px rgba(0, 0, 0, 0.48);
+    --shadow-cyan-glow: 0 0 20px rgba(37, 217, 248, 0.2);
+}
+
+/* Dark mode specific component adjustments */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #080c14;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #1c273c;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #2a3b5c;
+}
+
+[data-theme="dark"] .nav-item:hover {
+    background: #162032;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .nav-item.active {
+    color: #25d9f8;
+    background: rgba(37, 217, 248, 0.12);
+    border-left: 3px solid #25d9f8;
+}
+
+[data-theme="dark"] .nav-item.active svg {
+    color: #25d9f8;
+}
+
+[data-theme="dark"] .profile:hover {
+    background: #162032;
+}
+
+[data-theme="dark"] .search-box {
+    background: #0d1422;
+    border-color: #223048;
+}
+
+[data-theme="dark"] .search-box input {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .icon-button {
+    background: #101726;
+    border-color: #223048;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .icon-button:hover {
+    background: #162032;
+    color: #25d9f8;
+    border-color: #25d9f8;
+}
+
+[data-theme="dark"] .notifications-dropdown {
+    background: #101726;
+    border-color: #223048;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .notifications-header {
+    border-bottom-color: #1c273c;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .notif-item {
+    border-bottom-color: #1c273c;
+}
+
+[data-theme="dark"] .notif-item:hover {
+    background: #162032;
+}
+
+[data-theme="dark"] .notif-shipment {
+    color: #25d9f8;
+}
+
+[data-theme="dark"] .notif-message {
+    color: #cbd5e1;
+}
+
+/* Common form inputs in dark mode */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background-color: #0d1422;
+    color: #f8fafc;
+    border-color: #223048;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+}
+
+/* Map controls in dark mode */
+[data-theme="dark"] .map-toolbar,
+[data-theme="dark"] .map-control-btn,
+[data-theme="dark"] .map-objective-card,
+[data-theme="dark"] .route-summary-panel,
+[data-theme="dark"] .map-bottom-drawer {
+    background: #101726;
+    border-color: #223048;
+    color: #f8fafc;
+}
+
+/* Tables and cards in dark mode */
+[data-theme="dark"] .shipments-table-card,
+[data-theme="dark"] .analytics-card,
+[data-theme="dark"] .settings-panel,
+[data-theme="dark"] .alerts-table-card,
+[data-theme="dark"] .home-kpi-card,
+[data-theme="dark"] .executive-snapshot-card,
+[data-theme="dark"] .system-status-item,
+[data-theme="dark"] .benchmark-card {
+    background: #101726;
+    border-color: #223048;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] th {
+    background: #0d1422;
+    color: #94a3b8;
+    border-bottom-color: #1c273c;
+}
+
+[data-theme="dark"] td {
+    border-bottom-color: #1c273c;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] tr:hover td {
+    background: #162032;
+}

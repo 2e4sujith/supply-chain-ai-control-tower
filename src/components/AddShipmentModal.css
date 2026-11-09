@@ -1,0 +1,575 @@
+/* ==========================================================================
+   AddShipmentModal Component — 3-Step Wizard Modal Styles
+   ========================================================================== */
+
+.shipment-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.shipment-wizard-modal {
+  width: min(620px, 100%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.wizard-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+
+.wizard-modal-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wizard-modal-title-group .eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.wizard-modal-title-group h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.wizard-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+  background: var(--bg-card-hover);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wizard-close-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--color-cyan);
+}
+
+/* ==========================================================================
+   Stepper Progress Indicator
+   ========================================================================== */
+.wizard-stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--bg-card-hover);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+
+.wizard-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.wizard-step-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border-card);
+  transition: all 0.2s ease;
+}
+
+.wizard-step-indicator.active .wizard-step-circle {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+
+[data-theme="dark"] .wizard-step-indicator.active .wizard-step-circle {
+  background: #25d9f8;
+  color: #080c14;
+  border-color: #25d9f8;
+  box-shadow: 0 0 0 3px rgba(37, 217, 248, 0.25);
+}
+
+.wizard-step-indicator.completed .wizard-step-circle {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.wizard-step-label {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.step-num-text {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.step-name-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.wizard-step-indicator.active .step-name-text {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.wizard-step-divider {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0 12px;
+}
+
+/* ==========================================================================
+   Wizard Body & Form Steps
+   ========================================================================== */
+.wizard-modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.wizard-step-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.wizard-step-title h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wizard-step-title p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.wizard-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .wizard-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wizard-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wizard-field-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.wizard-field-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.field-hint-action {
+  color: var(--color-blue);
+  font-size: 10px;
+  cursor: pointer;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.field-hint-action:hover {
+  text-decoration: underline;
+}
+
+.wizard-field-group input,
+.wizard-field-group select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.wizard-field-group input:focus,
+.wizard-field-group select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+/* ==========================================================================
+   Step 2: Transport Mode Visual Radio Cards
+   ========================================================================== */
+.transport-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+@media (max-width: 540px) {
+  .transport-mode-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.mode-radio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-card);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--text-secondary);
+}
+
+.mode-radio-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--color-cyan);
+}
+
+.mode-radio-card.selected {
+  border-color: #0284c7;
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .mode-radio-card.selected {
+  border-color: #25d9f8;
+  background: rgba(37, 217, 248, 0.12);
+  color: #25d9f8;
+}
+
+.mode-radio-card span {
+  font-size: 11px;
+}
+
+/* Priority Selector Pills */
+.priority-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.priority-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-card);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.priority-pill-btn:hover {
+  background: var(--bg-card-hover);
+}
+
+.priority-pill-btn.selected.standard {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.priority-pill-btn.selected.high {
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+  font-weight: 700;
+}
+
+.priority-pill-btn.selected.urgent {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Step 3: Review & Summary Card
+   ========================================================================== */
+.wizard-review-card {
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-route-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 12px;
+}
+
+.review-hub-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-hub-box .hub-role {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.review-hub-box .hub-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.review-route-arrow {
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+}
+
+.review-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.review-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-spec-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.review-spec-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.review-ai-assessment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.review-ai-assessment svg {
+  color: #0284c7;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Success Confirmation State */
+.wizard-success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+  gap: 14px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.success-check-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  border: 2px solid #86efac;
+  display: grid;
+  place-items: center;
+}
+
+[data-theme="dark"] .success-check-icon {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.wizard-success-state h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.wizard-success-state p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 420px;
+}
+
+/* ==========================================================================
+   Wizard Footer Actions
+   ========================================================================== */
+.wizard-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 20px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  gap: 12px;
+}
+
+.wizard-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wizard-back-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.wizard-next-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  background: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.4);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+  margin-left: auto;
+}
+
+.wizard-next-btn:hover:not(:disabled) {
+  background: #0369a1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+}
+
+.wizard-next-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
