@@ -1,0 +1,103 @@
+/* ==========================================================================
+   DashboardBackgroundEffects Component — Ambient 3D Neon & Logistics Lighting
+   ========================================================================== */
+
+.dashboard-bg-effects-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.dashboard-bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ==========================================================================
+   Soft Blurred Ambient Glowing Orbs
+   ========================================================================== */
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.08;
+  will-change: transform;
+  animation: floatOrb 50s infinite alternate ease-in-out;
+}
+
+[data-theme="dark"] .ambient-orb {
+  opacity: 0.16;
+  filter: blur(110px);
+}
+
+.orb-cyan {
+  width: 520px;
+  height: 520px;
+  top: -80px;
+  left: 5%;
+  background: radial-gradient(circle, #0284c7 0%, rgba(2, 132, 199, 0) 70%);
+  animation-duration: 45s;
+}
+
+.orb-purple {
+  width: 480px;
+  height: 480px;
+  top: 300px;
+  right: -60px;
+  background: radial-gradient(circle, #7c3aed 0%, rgba(124, 58, 237, 0) 70%);
+  animation-duration: 55s;
+  animation-delay: -10s;
+}
+
+.orb-green {
+  width: 440px;
+  height: 440px;
+  top: 650px;
+  left: 10%;
+  background: radial-gradient(circle, #10b981 0%, rgba(16, 185, 129, 0) 70%);
+  animation-duration: 60s;
+  animation-delay: -20s;
+}
+
+.orb-blue {
+  width: 500px;
+  height: 500px;
+  bottom: 100px;
+  right: 15%;
+  background: radial-gradient(circle, #2563eb 0%, rgba(37, 99, 235, 0) 70%);
+  animation-duration: 50s;
+  animation-delay: -30s;
+}
+
+@keyframes floatOrb {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(40px, 30px, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-30px, -20px, 0) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb {
+    animation: none !important;
+  }
+}

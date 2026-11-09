@@ -7,13 +7,13 @@
   border-radius: 12px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(2, 132, 199, 0.06);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .supply-chain-globe-wrapper:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  border-color: #bae6fd;
+  box-shadow: 0 10px 32px rgba(2, 132, 199, 0.08), 0 0 20px rgba(56, 189, 248, 0.12);
 }
 
 .supply-chain-globe-wrapper.compact {

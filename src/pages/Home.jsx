@@ -31,6 +31,7 @@ import {
   wsService,
 } from '../services/api.js'
 import SceneFallback from '../components/three/SceneFallback.jsx'
+import DashboardBackgroundEffects from '../components/DashboardBackgroundEffects.jsx'
 const SupplyChainGlobe = lazy(() => import('../components/three/SupplyChainGlobe.jsx'))
 import './Home.css'
 
@@ -164,6 +165,7 @@ function Home() {
 
   return (
     <div className="dashboard-page">
+      <DashboardBackgroundEffects />
       {/* Executive Title Header */}
       <section className="dashboard-intro">
         <div>
@@ -194,7 +196,7 @@ function Home() {
       <section className="kpi-grid" aria-label="Key Performance Indicators">
         {kpis.map(({ label, value, context, icon: Icon, tone, path }) => (
           <article
-            className="kpi-card"
+            className={`kpi-card tone-${tone}`}
             key={label}
             onClick={() => navigate(path)}
             title={`Navigate to ${label}`}

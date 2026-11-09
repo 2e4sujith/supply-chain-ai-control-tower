@@ -58,23 +58,39 @@ export function calculateBearing(lat1, lon1, lat2, lon2) {
   return (brng + 360) % 360
 }
 
-// Key-free OpenStreetMap & CARTO Basemap Tile URLs
+// High-Reliability, 100% Key-Free Map Tile Providers (No API Key Required)
 const TILE_PROVIDERS = {
-  osm: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-    subdomains: 'abc'
+  streets: {
+    name: 'Street Navigation',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a> &copy; OpenStreetMap contributors',
+    maxZoom: 19,
   },
-  voyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd'
+  osm: {
+    name: 'OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  hot: {
+    name: 'Humanitarian / Navigation',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, Humanitarian style',
+    subdomains: 'abc',
+    maxZoom: 19,
+  },
+  topo: {
+    name: 'Topographic',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>, USGS, NOAA',
+    maxZoom: 19,
   },
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd'
-  }
+    name: 'Dark Operations',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>, DeLorme, NAVTEQ',
+    maxZoom: 16,
+  },
 }
 
 function calculateDistanceKm(lat1, lon1, lat2, lon2) {
@@ -406,8 +422,10 @@ function DemoMap({
   const mapInstanceRef = useRef(null)
   const layersGroupRef = useRef(null)
   const lastFitKeyRef = useRef('')
-  const [currentZoom, setCurrentZoom] = useState(4)
-  const [mapStyle, setMapStyle] = useState('voyager')
+  const [mapStyle, setMapStyle] = useState(() => {
+    const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
+    return isDark ? 'dark' : 'streets'
+  })
   const [showAllShipments, setShowAllShipments] = useState(true)
   const [isRoadLoading, setIsRoadLoading] = useState(false)
   const [hasRealRoadGeometry, setHasRealRoadGeometry] = useState(false)
@@ -675,12 +693,20 @@ function DemoMap({
       return
     }
 
-    // Initialize default Tile Layer (Voyager / OSM)
-    const provider = TILE_PROVIDERS[mapStyle] || TILE_PROVIDERS.voyager || TILE_PROVIDERS.osm
+    // Initialize default Tile Layer (Streets / OSM)
+    const provider = TILE_PROVIDERS[mapStyle] || TILE_PROVIDERS.streets || TILE_PROVIDERS.osm
     const tileLayer = L.tileLayer(provider.url, {
       attribution: provider.attribution,
       subdomains: provider.subdomains || 'abc',
-      maxZoom: 19,
+      maxZoom: provider.maxZoom || 19,
+    })
+    tileLayer.on('tileerror', (e) => {
+      if (e.tile && !e.tile._fallbackTriggered) {
+        e.tile._fallbackTriggered = true
+        if (e.coords) {
+          e.tile.src = `https://tile.openstreetmap.org/${e.coords.z}/${e.coords.x}/${e.coords.y}.png`
+        }
+      }
     })
     tileLayer.addTo(map)
 
@@ -726,7 +752,7 @@ function DemoMap({
     if (!map) return
     setMapStyle(style)
 
-    const provider = TILE_PROVIDERS[style] || TILE_PROVIDERS.osm
+    const provider = TILE_PROVIDERS[style] || TILE_PROVIDERS.streets || TILE_PROVIDERS.osm
 
     map.eachLayer((layer) => {
       if (layer instanceof L.TileLayer) {
@@ -737,10 +763,28 @@ function DemoMap({
     const newTileLayer = L.tileLayer(provider.url, {
       attribution: provider.attribution,
       subdomains: provider.subdomains || 'abc',
-      maxZoom: 19,
+      maxZoom: provider.maxZoom || 19,
+    })
+    newTileLayer.on('tileerror', (e) => {
+      if (e.tile && !e.tile._fallbackTriggered) {
+        e.tile._fallbackTriggered = true
+        if (e.coords) {
+          e.tile.src = `https://tile.openstreetmap.org/${e.coords.z}/${e.coords.x}/${e.coords.y}.png`
+        }
+      }
     })
     newTileLayer.addTo(map)
   }, [])
+
+  // Synchronize map tile style when global theme changes
+  useEffect(() => {
+    const handleThemeSync = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+      switchMapStyle(isDark ? 'dark' : 'streets')
+    }
+    window.addEventListener('themechange', handleThemeSync)
+    return () => window.removeEventListener('themechange', handleThemeSync)
+  }, [switchMapStyle])
 
   // User explicitly clicks Fit Route
   const handleFitRoute = useCallback(() => {
@@ -1206,27 +1250,35 @@ function DemoMap({
         <div className="map-style-toggles">
           <button
             type="button"
-            className={`map-style-btn ${mapStyle === 'voyager' ? 'active' : ''}`}
-            title="Logistics Control Tower View"
-            onClick={() => switchMapStyle('voyager')}
+            className={`map-style-btn ${mapStyle === 'streets' ? 'active' : ''}`}
+            title="Clean Street Navigation View (Key-Free)"
+            onClick={() => switchMapStyle('streets')}
           >
-            Voyager
+            Streets
+          </button>
+          <button
+            type="button"
+            className={`map-style-btn ${mapStyle === 'osm' ? 'active' : ''}`}
+            title="OpenStreetMap Standard (Key-Free)"
+            onClick={() => switchMapStyle('osm')}
+          >
+            OSM
           </button>
           <button
             type="button"
             className={`map-style-btn ${mapStyle === 'dark' ? 'active' : ''}`}
-            title="Dark Operations Room View"
+            title="Dark Operations Room View (Key-Free)"
             onClick={() => switchMapStyle('dark')}
           >
             Dark
           </button>
           <button
             type="button"
-            className={`map-style-btn ${mapStyle === 'osm' ? 'active' : ''}`}
-            title="OpenStreetMap Standard"
-            onClick={() => switchMapStyle('osm')}
+            className={`map-style-btn ${mapStyle === 'topo' ? 'active' : ''}`}
+            title="Topographic Terrain View (Key-Free)"
+            onClick={() => switchMapStyle('topo')}
           >
-            OSM
+            Topo
           </button>
         </div>
       </div>

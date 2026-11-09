@@ -4,6 +4,17 @@
     margin: 0 auto;
     width: 100%;
     color: var(--text-primary);
+    position: relative;
+    overflow-x: hidden;
+}
+
+.dashboard-intro,
+.kpi-grid,
+.dashboard-globe-section,
+.control-split-grid,
+.infra-summary-grid {
+    position: relative;
+    z-index: 1;
 }
 
 .dashboard-intro {
@@ -43,6 +54,20 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+    animation: badgeNeonPulse 3s ease-in-out infinite alternate;
+    transition: all 0.2s ease;
+}
+
+@keyframes badgeNeonPulse {
+    0% {
+        box-shadow: 0 0 6px rgba(2, 132, 199, 0.15);
+        border-color: #bae6fd;
+    }
+    100% {
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.45), 0 0 2px rgba(2, 132, 199, 0.7);
+        border-color: #38bdf8;
+    }
 }
 
 .dashboard-intro .subtitle {
@@ -125,13 +150,78 @@
 
 .kpi-card:hover {
     transform: translateY(-4px) translateZ(10px);
-    border-color: #0284c7 !important;
-    background: #ffffff !important;
-    box-shadow: 0 12px 28px rgba(2, 132, 199, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .kpi-card:hover::before {
     opacity: 1;
+}
+
+/* Tone-Specific Neon Hover States */
+.kpi-card.tone-blue:hover,
+.kpi-card:has(.kpi-icon.blue):hover {
+    border-color: #0284c7 !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(2, 132, 199, 0.16), 0 0 20px rgba(56, 189, 248, 0.24), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.kpi-card.tone-blue::before,
+.kpi-card:has(.kpi-icon.blue)::before {
+    background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.kpi-card.tone-green:hover,
+.kpi-card:has(.kpi-icon.green):hover {
+    border-color: #16a34a !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(22, 163, 74, 0.16), 0 0 20px rgba(74, 222, 128, 0.24), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.kpi-card.tone-green::before,
+.kpi-card:has(.kpi-icon.green)::before {
+    background: linear-gradient(90deg, #16a34a, #4ade80);
+}
+
+.kpi-card.tone-amber:hover,
+.kpi-card:has(.kpi-icon.amber):hover {
+    border-color: #d97706 !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(217, 119, 6, 0.16), 0 0 20px rgba(251, 191, 36, 0.24), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.kpi-card.tone-amber::before,
+.kpi-card:has(.kpi-icon.amber)::before {
+    background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.kpi-card.tone-red:hover,
+.kpi-card:has(.kpi-icon.red):hover {
+    border-color: #dc2626 !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(220, 38, 38, 0.16), 0 0 20px rgba(248, 113, 113, 0.24), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.kpi-card.tone-red::before,
+.kpi-card:has(.kpi-icon.red)::before {
+    background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+.kpi-card.tone-purple:hover,
+.kpi-card:has(.kpi-icon.purple):hover {
+    border-color: #7c3aed !important;
+    background: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(124, 58, 237, 0.16), 0 0 20px rgba(192, 132, 252, 0.24), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.kpi-card.tone-purple::before,
+.kpi-card:has(.kpi-icon.purple)::before {
+    background: linear-gradient(90deg, #7c3aed, #c084fc);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .research-badge {
+        animation: none !important;
+    }
+    .kpi-card {
+        transition: none !important;
+    }
+    .kpi-card:hover {
+        transform: none !important;
+    }
 }
 
 .dashboard-globe-section {

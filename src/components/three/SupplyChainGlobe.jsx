@@ -446,6 +446,18 @@ export default function SupplyChainGlobe({
       lineMesh.userData = { shipmentId: shipment.id, shipment, baseColor: colorHex }
       routesGroup.add(lineMesh)
 
+      // Outer Neon Halo / Corona line with Additive Blending
+      const glowMaterial = new THREE.LineBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: isSelected ? 0.75 : 0.32,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+      const glowMesh = new THREE.Line(curveGeometry, glowMaterial)
+      glowMesh.userData = { shipmentId: shipment.id, shipment, isGlow: true, baseColor: colorHex }
+      routesGroup.add(glowMesh)
+
       // Dynamic Animated Shipment Particle moving Origin -> Destination
       const particleGeometry = new THREE.SphereGeometry(isSelected ? 0.038 : 0.024, 12, 12)
       const particleMaterial = new THREE.MeshBasicMaterial({
@@ -512,21 +524,22 @@ export default function SupplyChainGlobe({
       const isHovered = u.shipmentId === hoveredId
 
       if (child.isLine) {
+        const isGlow = Boolean(u.isGlow)
         if (isSelected) {
           child.material.color.setHex(0x00f0ff) // Vibrant Neon Cyan
-          child.material.opacity = 1.0
-          child.renderOrder = 10
+          child.material.opacity = isGlow ? 0.85 : 1.0
+          child.renderOrder = isGlow ? 11 : 10
         } else if (isHovered) {
           child.material.color.setHex(0xffffff) // Pure White Glow on hover
-          child.material.opacity = 1.0
-          child.renderOrder = 9
+          child.material.opacity = isGlow ? 0.9 : 1.0
+          child.renderOrder = isGlow ? 10 : 9
         } else if (isAnyActive) {
           child.material.color.setHex(u.baseColor || 0x25d9f8)
-          child.material.opacity = 0.22 // Subtly dim background routes
+          child.material.opacity = isGlow ? 0.08 : 0.22 // Subtly dim background routes
           child.renderOrder = 1
         } else {
           child.material.color.setHex(u.baseColor || 0x25d9f8)
-          child.material.opacity = 0.65
+          child.material.opacity = isGlow ? 0.32 : 0.65
           child.renderOrder = 2
         }
       } else if (u.isParticle) {
