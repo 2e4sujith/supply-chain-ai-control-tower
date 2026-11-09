@@ -2,6 +2,13 @@ const DEFAULT_PROD_API_URL = 'https://supply-chain-ai-control-tower.onrender.com
 const DEFAULT_PROD_WS_URL = 'wss://supply-chain-ai-control-tower.onrender.com/ws'
 
 export function getApiBaseUrl() {
+    if (typeof window !== 'undefined' && window.location) {
+        const host = window.location.hostname
+        // When accessed via public tunnel or reverse-proxy gateway, route /api through same-origin proxy
+        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
+            return window.location.origin
+        }
+    }
     if (import.meta.env.VITE_API_BASE_URL) {
         return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
     }
@@ -10,16 +17,19 @@ export function getApiBaseUrl() {
         if (host === 'localhost' || host === '127.0.0.1') {
             return `http://${host}:8000`
         }
-        // When accessed via public tunnel or reverse-proxy gateway, route /api through same-origin proxy
-        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
-            return window.location.origin
-        }
         return DEFAULT_PROD_API_URL
     }
     return DEFAULT_PROD_API_URL
 }
 
 export function getWsUrl() {
+    if (typeof window !== 'undefined' && window.location) {
+        const host = window.location.hostname
+        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+            return `${proto}//${window.location.host}/ws`
+        }
+    }
     let wsUrl = import.meta.env.VITE_WS_URL
     if (wsUrl && typeof wsUrl === 'string' && wsUrl.trim()) {
         wsUrl = wsUrl.trim()
@@ -29,14 +39,6 @@ export function getWsUrl() {
             wsUrl = wsUrl.replace(/^https:\/\//, 'wss://')
         }
         return wsUrl.replace(/\/$/, '')
-    }
-
-    if (typeof window !== 'undefined' && window.location) {
-        const host = window.location.hostname
-        if (host.includes('trycloudflare.com') || host.includes('localtunnel.me') || host.includes('ngrok') || host.includes('pinggy.link')) {
-            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-            return `${proto}//${window.location.host}/ws`
-        }
     }
 
     const apiBase = getApiBaseUrl()
