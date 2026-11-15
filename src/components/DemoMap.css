@@ -7,11 +7,12 @@
   width: 100%;
   min-height: clamp(400px, 55vh, 680px);
   height: clamp(400px, 55vh, 680px);
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-app);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-3d-card);
+  transform: translateZ(0);
 }
 
 .leaflet-map-canvas {
@@ -42,31 +43,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #e2e8f0;
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
   color: #0f172a;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-glass);
   transition: all 0.25s ease;
 }
 
 .map-badge.shortest {
   border-color: #0284c7;
-  box-shadow: 0 2px 12px rgba(2, 132, 199, 0.18);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.22);
 }
 
 .map-badge.fastest {
   border-color: #d97706;
-  box-shadow: 0 2px 12px rgba(217, 119, 6, 0.18);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.22);
 }
 
 .map-badge.risk-adjusted {
   border-color: #16a34a;
-  box-shadow: 0 2px 12px rgba(22, 163, 74, 0.18);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.22);
 }
 
 .map-badge-title {
@@ -127,16 +129,17 @@
   top: 14px;
   right: 14px;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #e2e8f0;
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
   color: #475569;
   font-family: 'JetBrains Mono', monospace;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-glass);
 }
 
 .map-coordinates span {
@@ -165,20 +168,21 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-3d-btn);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .map-control-btn:hover {
   background: #f1f5f9;
   color: #0284c7;
   border-color: #0284c7;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.18);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
 }
 
 .map-control-btn:active {
-  transform: translateY(0);
+  transform: translateY(1.5px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .map-control-btn.active {
@@ -195,7 +199,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-3d-btn);
 }
 
 .map-style-btn {
@@ -220,7 +224,7 @@
 .map-style-btn.active {
   background: #0284c7;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
 }
 
 .map-legend {
@@ -231,15 +235,16 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #e2e8f0;
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
   color: #334155;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-glass);
 }
 
 .map-legend span {

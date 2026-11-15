@@ -8,7 +8,7 @@
   margin: 0 auto;
   padding: 28px 32px;
   box-sizing: border-box;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .analytics-page .page-intro {
@@ -23,13 +23,13 @@
 .analytics-page .page-intro h1 {
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 4px 0 6px;
   letter-spacing: -0.5px;
 }
 
 .analytics-page .page-intro p {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 13px;
   margin: 0;
   max-width: 760px;
@@ -41,12 +41,13 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 8px;
-  background: #e0f2fe;
-  border: 1px solid #bae6fd;
-  color: #0284c7;
+  background: var(--color-cyan-bg);
+  border: 1px solid var(--color-cyan-border);
+  color: var(--color-cyan);
   font-size: 11px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* 6 KPI Cards Grid */
@@ -64,13 +65,20 @@
 }
 
 .analytics-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-3d-card);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  position: relative;
+}
+
+.analytics-card:hover {
+  transform: translateY(-4px) translateZ(8px);
+  box-shadow: var(--shadow-3d-card-hover);
 }
 
 .analytics-card-head {
@@ -84,17 +92,18 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #e0f2fe;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
+  background: var(--color-cyan-bg);
+  color: var(--color-cyan);
+  border: 1px solid var(--color-cyan-border);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
 }
 
 .analytics-card h2 {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0 0 6px;
@@ -111,8 +120,9 @@
 .analytics-value strong {
   font-size: 26px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  color: #0f172a;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .positive {
@@ -122,7 +132,7 @@
   color: #16a34a;
   font-size: 11px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 /* Charts / Bars / Sparklines */
@@ -132,28 +142,29 @@
   align-items: flex-end;
   gap: 6px;
   padding-top: 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle);
   margin-top: auto;
 }
 
 .mini-bars span {
   flex: 1;
-  background: #0284c7;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
   border-radius: 3px 3px 0 0;
   min-height: 4px;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
   transition: height 0.3s;
 }
 
 .mini-bars span:nth-child(2n) {
-  background: #38bdf8;
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
 }
 
 .mini-bars.red span {
-  background: #dc2626;
+  background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
 }
 
 .mini-bars.red span:nth-child(2n) {
-  background: #f87171;
+  background: linear-gradient(180deg, #fca5a5 0%, #ef4444 100%);
 }
 
 .mini-line {
@@ -230,19 +241,20 @@
 
 /* Empirical Benchmark Section */
 .benchmarks-analytics-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .benchmark-analytics-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 16px;
   margin-bottom: 20px;
 }
@@ -251,31 +263,32 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #0284c7;
+  color: var(--color-cyan);
 }
 
 .benchmark-title h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0 0 2px;
 }
 
 .benchmark-title p {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
 }
 
 .sample-badge {
   font-size: 10px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 4px 10px;
   border-radius: 6px;
-  background: #e0f2fe;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
+  background: var(--color-cyan-bg);
+  color: var(--color-cyan);
+  border: 1px solid var(--color-cyan-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* 4 Summary KPI Cards */
@@ -293,19 +306,26 @@
 }
 
 .bench-kpi-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.bench-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-3d-card);
 }
 
 .bench-kpi-label {
   font-size: 10px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -313,13 +333,13 @@
 .bench-kpi-val {
   font-size: 22px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
-  color: #0f172a;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
 }
 
 .bench-kpi-card small {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .highlight-purple { color: #7c3aed !important; }
@@ -342,22 +362,31 @@
 .benchmark-table th {
   text-align: left;
   padding: 10px 14px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--bg-card-elevated);
+  color: var(--text-dim);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-card);
   white-space: nowrap;
 }
 
 .benchmark-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
-  font-family: 'JetBrains Mono', monospace;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   font-size: 12px;
+}
+
+.benchmark-table tbody tr {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.benchmark-table tbody tr:hover {
+  background: var(--bg-card-hover);
+  box-shadow: inset 3px 0 0 var(--color-cyan);
 }
 
 .benchmark-table td:first-child {
@@ -366,33 +395,34 @@
 
 .model-sub {
   font-size: 10px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
 .benchmark-table tr.highlight-row {
-  background: #f0fdf4;
+  background: rgba(22, 163, 74, 0.08);
 }
 
 .benchmark-table tr.ensemble-row {
-  background: #f5f3ff;
+  background: rgba(124, 58, 237, 0.08);
 }
 
 /* Topology Hubs Section */
 .topology-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .topology-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 16px;
   margin-bottom: 20px;
 }
@@ -401,31 +431,32 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #0284c7;
+  color: var(--color-cyan);
 }
 
 .topology-title h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0 0 2px;
 }
 
 .topology-title p {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
 }
 
 .topology-badge {
   font-size: 10px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 4px 10px;
   border-radius: 6px;
-  background: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: var(--color-green-bg);
+  color: var(--color-green);
+  border: 1px solid var(--color-green-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .topology-grid {
@@ -455,32 +486,42 @@
 .topology-table th {
   text-align: left;
   padding: 10px 14px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--bg-card-elevated);
+  color: var(--text-dim);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .topology-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #0f172a;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.topology-table tbody tr {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.topology-table tbody tr:hover {
+  background: var(--bg-card-hover);
+  box-shadow: inset 3px 0 0 var(--color-cyan);
 }
 
 .region-tag {
   font-size: 11px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .risk-tag {
   font-size: 10px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 2px 7px;
   border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .risk-tag.crit { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
@@ -488,19 +529,20 @@
 .risk-tag.med { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
 
 .topology-insights-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .topology-insights-card h3 {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0;
   display: flex;
   align-items: center;

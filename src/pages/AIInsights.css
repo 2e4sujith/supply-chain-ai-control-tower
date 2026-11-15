@@ -84,12 +84,13 @@
 
 /* Methodology Architecture Panel */
 .methodology-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 22px 24px;
   margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .methodology-header {
@@ -98,13 +99,13 @@
 
 .methodology-header h2 {
   font-size: 18px;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 4px 0;
   font-weight: 700;
 }
 
 .methodology-header p {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 0;
 }
@@ -122,19 +123,20 @@
 }
 
 .methodology-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 18px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, border-color 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .methodology-card:hover {
-  transform: translateY(-2px);
-  border-color: #0284c7;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+  transform: translateY(-4px) translateZ(8px);
+  border-color: var(--color-cyan);
+  box-shadow: var(--shadow-3d-card-hover);
 }
 
 .xgb-methodology {
@@ -197,12 +199,13 @@
 
 /* Feature Importance & SHAP View */
 .shap-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 22px 24px;
   margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .shap-header {
@@ -211,13 +214,13 @@
 
 .shap-header h2 {
   font-size: 18px;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 4px 0;
   font-weight: 700;
 }
 
 .shap-header p {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 0;
 }
@@ -229,10 +232,17 @@
 }
 
 .factor-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 8px;
   padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.factor-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 .factor-head {
@@ -367,14 +377,17 @@
 
 /* Consensus Card */
 .consensus-card {
-  background: #f8fafc;
-  border: 1px solid #0284c7;
+  background: var(--bg-card);
+  border: 1.5px solid var(--color-cyan);
   border-radius: 12px;
-  padding: 18px 22px;
+  padding: 22px 26px;
   display: grid;
   grid-template-columns: 1fr 1.5fr;
   gap: 20px;
   align-items: center;
+  box-shadow: 0 8px 28px -4px rgba(2, 132, 199, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  position: relative;
+  transition: box-shadow 0.25s ease;
 }
 
 @media (max-width: 860px) {
@@ -387,11 +400,11 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #0284c7;
+  color: var(--color-cyan);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   margin-bottom: 8px;
 }
 
@@ -404,23 +417,24 @@
 .fused-score {
   font-size: 38px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .fused-tier {
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   display: block;
 }
 
 .fused-sub {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 11px;
   margin: 3px 0 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .agreement-badge {
@@ -430,15 +444,16 @@
   color: #16a34a;
   font-size: 11px;
   font-weight: 700;
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
+  background: var(--color-green-bg);
+  border: 1px solid var(--color-green-border);
   padding: 4px 8px;
   border-radius: 6px;
   margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .consensus-rec {
-  color: #334155;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
   margin: 0 0 12px;
@@ -456,41 +471,59 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  box-shadow: var(--shadow-3d-btn);
+  transition: all 0.15s ease;
   border: 1px solid transparent;
 }
 
 .action-btn.primary {
-  background: #0284c7;
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
   color: #ffffff;
+  border-color: rgba(2, 132, 199, 0.6);
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .action-btn.primary:hover {
-  background: #0369a1;
+  background: linear-gradient(180deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.38);
+}
+
+.action-btn.primary:active {
+  transform: translateY(1.5px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 .action-btn.secondary {
-  background: #ffffff;
-  color: #334155;
-  border-color: #cbd5e1;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-color: var(--border-card);
 }
 
 .action-btn.secondary:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+}
+
+.action-btn.secondary:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 /* Benchmark Matrix */
 .benchmark-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .benchmark-header {
@@ -644,23 +677,24 @@
 }
 
 .confusion-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .confusion-card h3 {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0 0 2px;
 }
 
 .cm-arch {
   font-size: 10px;
-  color: #64748b;
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   display: block;
   margin-bottom: 12px;
 }
@@ -672,17 +706,24 @@
 }
 
 .cm-cell {
-  padding: 10px;
+  padding: 11px 12px;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   border: 1px solid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cm-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .cm-count {
   font-size: 18px;
   font-weight: 800;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .cm-label {
@@ -694,7 +735,7 @@
 
 .cm-pct {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .true-pos {
@@ -723,11 +764,12 @@
 
 /* Mitigation Playbooks */
 .playbooks-container {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-3d-card);
+  transition: box-shadow 0.25s ease;
 }
 
 .playbooks-header {
@@ -736,7 +778,7 @@
 
 .playbooks-header h2 {
   font-size: 18px;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 4px 0 0;
   font-weight: 700;
 }
@@ -754,12 +796,19 @@
 }
 
 .playbook-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 18px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.playbook-card:hover {
+  transform: translateY(-3px) translateZ(4px);
+  box-shadow: var(--shadow-3d-card);
 }
 
 .playbook-icon {
