@@ -14,38 +14,44 @@ import {
   ArrowRight,
   Compass,
   Radio,
-  Sliders
+  Layers,
+  MapPin,
+  TrendingUp
 } from 'lucide-react'
 import './Network3DVisual.css'
 
-// 33 representative logistics hubs in 4 distinct regional clusters (North America, Europe, India, Asia-Pacific)
+// ============================================================================
+// 33 Representative Logistics Hubs in 4 Distinct 3D Regional Spatial Layers
+// Layered across X, Y, and Z axes to create authentic 3D depth
+// ============================================================================
 export const NETWORK_NODES_3D = [
-  // ==========================================
-  // CLUSTER 1: North America Trunk (0 - 9)
-  // Far West / Left hemisphere (X: -335 to -155)
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // CLUSTER 1: North American Network (0 - 9)
+  // Region: 'North American Network', Group: 'na'
+  // Depth Layer: Mid-to-Back Western Flank (Z: -125 to 25, X: -335 to -155)
+  // --------------------------------------------------------------------------
   {
     id: 'LAX',
     name: 'Los Angeles',
     country: 'US',
-    x: -310, y: 30, z: -50,
+    x: -310, y: 30, z: -70,
     group: 'na',
-    radius: 7.5,
+    radius: 8.2,
     isGateway: true,
     riskScore: 65,
     riskLevel: 'High',
     type: 'Pacific Gateway Mega-Port',
     region: 'North American Network',
-    modality: 'Deepwater Maritime & Intermodal Rail',
+    modality: 'Deepwater Maritime & Transcon Rail',
     insight: 'Primary Pacific gateway handling 40% of container imports. High structural congestion; GCN model recommends dynamic diversion via Seattle Great Circle corridor.'
   },
   {
     id: 'LGB',
     name: 'Long Beach',
     country: 'US',
-    x: -290, y: 75, z: -25,
+    x: -290, y: 75, z: -45,
     group: 'na',
-    radius: 6.0,
+    radius: 5.5,
     isGateway: false,
     riskScore: 88,
     riskLevel: 'Critical',
@@ -58,9 +64,9 @@ export const NETWORK_NODES_3D = [
     id: 'OAK',
     name: 'Oakland',
     country: 'US',
-    x: -335, y: -20, z: -70,
+    x: -335, y: -20, z: -90,
     group: 'na',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 48,
     riskLevel: 'Medium',
@@ -73,9 +79,9 @@ export const NETWORK_NODES_3D = [
     id: 'SEA',
     name: 'Seattle',
     country: 'US',
-    x: -320, y: -105, z: -95,
+    x: -320, y: -105, z: -125,
     group: 'na',
-    radius: 6.0,
+    radius: 5.6,
     isGateway: false,
     riskScore: 38,
     riskLevel: 'Low',
@@ -88,9 +94,9 @@ export const NETWORK_NODES_3D = [
     id: 'CHI',
     name: 'Chicago',
     country: 'US',
-    x: -220, y: -50, z: 20,
+    x: -220, y: -50, z: -20,
     group: 'na',
-    radius: 7.0,
+    radius: 7.8,
     isGateway: true,
     riskScore: 72,
     riskLevel: 'High',
@@ -103,9 +109,9 @@ export const NETWORK_NODES_3D = [
     id: 'DAL',
     name: 'Dallas',
     country: 'US',
-    x: -245, y: 35, z: -5,
+    x: -245, y: 35, z: -35,
     group: 'na',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 32,
     riskLevel: 'Low',
@@ -118,9 +124,9 @@ export const NETWORK_NODES_3D = [
     id: 'HOU',
     name: 'Houston',
     country: 'US',
-    x: -225, y: 85, z: 35,
+    x: -225, y: 85, z: -10,
     group: 'na',
-    radius: 6.0,
+    radius: 5.5,
     isGateway: false,
     riskScore: 46,
     riskLevel: 'Medium',
@@ -133,9 +139,9 @@ export const NETWORK_NODES_3D = [
     id: 'NYC',
     name: 'New York',
     country: 'US',
-    x: -155, y: -65, z: 85,
+    x: -155, y: -65, z: 25,
     group: 'na',
-    radius: 7.0,
+    radius: 7.8,
     isGateway: true,
     riskScore: 56,
     riskLevel: 'Medium',
@@ -148,9 +154,9 @@ export const NETWORK_NODES_3D = [
     id: 'SAV',
     name: 'Savannah',
     country: 'US',
-    x: -175, y: 35, z: 75,
+    x: -175, y: 35, z: 15,
     group: 'na',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 36,
     riskLevel: 'Low',
@@ -163,9 +169,9 @@ export const NETWORK_NODES_3D = [
     id: 'TOR',
     name: 'Toronto',
     country: 'CA',
-    x: -185, y: -110, z: 50,
+    x: -185, y: -110, z: -15,
     group: 'na',
-    radius: 6.0,
+    radius: 5.4,
     isGateway: false,
     riskScore: 28,
     riskLevel: 'Low',
@@ -175,17 +181,18 @@ export const NETWORK_NODES_3D = [
     insight: 'Cross-border manufacturing supply link. Highly stable bilateral automotive and equipment supply flows.'
   },
 
-  // ==========================================
+  // --------------------------------------------------------------------------
   // CLUSTER 2: European Network (10 - 16)
-  // Center-North / Upper Hemisphere (X: -140 to -10, Y: -165 to -35)
-  // ==========================================
+  // Region: 'European Network', Group: 'europe'
+  // Depth Layer: Mid-North Tier (Z: 10 to 95, Y: -165 to -35, X: -140 to -10)
+  // --------------------------------------------------------------------------
   {
     id: 'RTM',
     name: 'Rotterdam',
     country: 'NL',
-    x: -70, y: -140, z: 140,
+    x: -70, y: -140, z: 75,
     group: 'europe',
-    radius: 7.5,
+    radius: 8.2,
     isGateway: true,
     riskScore: 76,
     riskLevel: 'High',
@@ -198,9 +205,9 @@ export const NETWORK_NODES_3D = [
     id: 'ANR',
     name: 'Antwerp',
     country: 'BE',
-    x: -115, y: -105, z: 105,
+    x: -115, y: -105, z: 55,
     group: 'europe',
-    radius: 6.0,
+    radius: 5.4,
     isGateway: false,
     riskScore: 45,
     riskLevel: 'Medium',
@@ -213,9 +220,9 @@ export const NETWORK_NODES_3D = [
     id: 'HAM',
     name: 'Hamburg',
     country: 'DE',
-    x: -30, y: -165, z: 160,
+    x: -30, y: -165, z: 95,
     group: 'europe',
-    radius: 6.5,
+    radius: 5.8,
     isGateway: false,
     riskScore: 58,
     riskLevel: 'Medium',
@@ -228,9 +235,9 @@ export const NETWORK_NODES_3D = [
     id: 'FRA',
     name: 'Frankfurt',
     country: 'DE',
-    x: -20, y: -95, z: 95,
+    x: -20, y: -95, z: 45,
     group: 'europe',
-    radius: 7.0,
+    radius: 7.6,
     isGateway: true,
     riskScore: 44,
     riskLevel: 'Medium',
@@ -243,9 +250,9 @@ export const NETWORK_NODES_3D = [
     id: 'LON',
     name: 'London',
     country: 'GB',
-    x: -140, y: -155, z: 145,
+    x: -140, y: -155, z: 80,
     group: 'europe',
-    radius: 6.5,
+    radius: 5.8,
     isGateway: false,
     riskScore: 39,
     riskLevel: 'Low',
@@ -258,9 +265,9 @@ export const NETWORK_NODES_3D = [
     id: 'GOA',
     name: 'Genoa',
     country: 'IT',
-    x: -10, y: -40, z: 70,
+    x: -10, y: -40, z: 25,
     group: 'europe',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 35,
     riskLevel: 'Low',
@@ -273,9 +280,9 @@ export const NETWORK_NODES_3D = [
     id: 'VLC',
     name: 'Valencia',
     country: 'ES',
-    x: -75, y: -35, z: 50,
+    x: -75, y: -35, z: 10,
     group: 'europe',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 30,
     riskLevel: 'Low',
@@ -285,18 +292,19 @@ export const NETWORK_NODES_3D = [
     insight: 'Strategic transshipment hub for western Mediterranean. Reliable weather profile and consistent vessel scheduling.'
   },
 
-  // ==========================================
+  // --------------------------------------------------------------------------
   // CLUSTER 3: India Regional Network (17 - 24)
-  // Center-South / Lower Hemisphere (X: -60 to 85, Y: -10 to 165)
-  // Focus: NH 16 Corridor & Gateway Ports
-  // ==========================================
+  // Region: 'India Regional Network', Group: 'india'
+  // Depth Layer: Foreground Tier (Z: 100 to 185, Y: -10 to 165, X: -60 to 85)
+  // Focus: NH 16 Economic Spine & Primary Gateways
+  // --------------------------------------------------------------------------
   {
     id: 'BOM',
     name: 'Mumbai',
     country: 'IN',
-    x: -60, y: 60, z: 60,
+    x: -60, y: 60, z: 120,
     group: 'india',
-    radius: 7.5,
+    radius: 8.2,
     isGateway: true,
     riskScore: 22,
     riskLevel: 'Low',
@@ -309,9 +317,9 @@ export const NETWORK_NODES_3D = [
     id: 'DEL',
     name: 'Delhi NCR',
     country: 'IN',
-    x: -20, y: -10, z: 80,
+    x: -20, y: -10, z: 100,
     group: 'india',
-    radius: 6.5,
+    radius: 7.2,
     isGateway: true,
     riskScore: 26,
     riskLevel: 'Low',
@@ -324,9 +332,9 @@ export const NETWORK_NODES_3D = [
     id: 'HYD',
     name: 'Hyderabad',
     country: 'IN',
-    x: 0, y: 45, z: 100,
+    x: 0, y: 45, z: 135,
     group: 'india',
-    radius: 6.5,
+    radius: 5.8,
     isGateway: false,
     riskScore: 24,
     riskLevel: 'Low',
@@ -339,9 +347,9 @@ export const NETWORK_NODES_3D = [
     id: 'BZA',
     name: 'Vijayawada',
     country: 'IN',
-    x: 35, y: 75, z: 140,
+    x: 35, y: 75, z: 170,
     group: 'india',
-    radius: 7.0,
+    radius: 8.0,
     isGateway: true,
     riskScore: 16,
     riskLevel: 'Low',
@@ -354,9 +362,9 @@ export const NETWORK_NODES_3D = [
     id: 'GNT',
     name: 'Guntur',
     country: 'IN',
-    x: 10, y: 110, z: 130,
+    x: 10, y: 110, z: 160,
     group: 'india',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 18,
     riskLevel: 'Low',
@@ -369,9 +377,9 @@ export const NETWORK_NODES_3D = [
     id: 'NLR',
     name: 'Nellore',
     country: 'IN',
-    x: 50, y: 135, z: 110,
+    x: 50, y: 135, z: 145,
     group: 'india',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 15,
     riskLevel: 'Low',
@@ -384,9 +392,9 @@ export const NETWORK_NODES_3D = [
     id: 'MAA',
     name: 'Chennai',
     country: 'IN',
-    x: 85, y: 165, z: 95,
+    x: 85, y: 165, z: 130,
     group: 'india',
-    radius: 7.0,
+    radius: 7.6,
     isGateway: true,
     riskScore: 32,
     riskLevel: 'Low',
@@ -399,9 +407,9 @@ export const NETWORK_NODES_3D = [
     id: 'VTZ',
     name: 'Visakhapatnam',
     country: 'IN',
-    x: 85, y: 45, z: 160,
+    x: 85, y: 45, z: 185,
     group: 'india',
-    radius: 6.0,
+    radius: 5.6,
     isGateway: false,
     riskScore: 28,
     riskLevel: 'Low',
@@ -411,17 +419,18 @@ export const NETWORK_NODES_3D = [
     insight: 'Eastern naval and heavy industrial port. Direct bulk mineral and petroleum transshipment hub along the Bay of Bengal.'
   },
 
-  // ==========================================
+  // --------------------------------------------------------------------------
   // CLUSTER 4: Asia-Pacific Network (25 - 32)
-  // Far East / Right hemisphere (X: 175 to 365)
-  // ==========================================
+  // Region: 'Asia-Pacific Network', Group: 'asia'
+  // Depth Layer: Mid-to-Back Eastern Flank (Z: -120 to 60, X: 175 to 365)
+  // --------------------------------------------------------------------------
   {
     id: 'SHA',
     name: 'Shanghai',
     country: 'CN',
-    x: 250, y: -45, z: -35,
+    x: 250, y: -45, z: -40,
     group: 'asia',
-    radius: 8.0,
+    radius: 8.5,
     isGateway: true,
     riskScore: 85,
     riskLevel: 'Critical',
@@ -434,9 +443,9 @@ export const NETWORK_NODES_3D = [
     id: 'SZX',
     name: 'Shenzhen',
     country: 'CN',
-    x: 220, y: 25, z: -10,
+    x: 220, y: 25, z: -15,
     group: 'asia',
-    radius: 6.5,
+    radius: 5.8,
     isGateway: false,
     riskScore: 50,
     riskLevel: 'Medium',
@@ -449,9 +458,9 @@ export const NETWORK_NODES_3D = [
     id: 'NGB',
     name: 'Ningbo',
     country: 'CN',
-    x: 290, y: -15, z: -15,
+    x: 290, y: -15, z: -25,
     group: 'asia',
-    radius: 6.0,
+    radius: 5.5,
     isGateway: false,
     riskScore: 42,
     riskLevel: 'Medium',
@@ -464,9 +473,9 @@ export const NETWORK_NODES_3D = [
     id: 'HKG',
     name: 'Hong Kong',
     country: 'HK',
-    x: 190, y: 60, z: 15,
+    x: 190, y: 60, z: 10,
     group: 'asia',
-    radius: 6.5,
+    radius: 5.8,
     isGateway: false,
     riskScore: 34,
     riskLevel: 'Low',
@@ -479,9 +488,9 @@ export const NETWORK_NODES_3D = [
     id: 'SIN',
     name: 'Singapore',
     country: 'SG',
-    x: 175, y: 135, z: 70,
+    x: 175, y: 135, z: 60,
     group: 'asia',
-    radius: 7.5,
+    radius: 8.0,
     isGateway: true,
     riskScore: 68,
     riskLevel: 'High',
@@ -494,9 +503,9 @@ export const NETWORK_NODES_3D = [
     id: 'SGN',
     name: 'Ho Chi Minh',
     country: 'VN',
-    x: 230, y: 95, z: 40,
+    x: 230, y: 95, z: 35,
     group: 'asia',
-    radius: 5.5,
+    radius: 5.2,
     isGateway: false,
     riskScore: 40,
     riskLevel: 'Medium',
@@ -509,9 +518,9 @@ export const NETWORK_NODES_3D = [
     id: 'PUS',
     name: 'Busan',
     country: 'KR',
-    x: 320, y: -90, z: -70,
+    x: 320, y: -90, z: -80,
     group: 'asia',
-    radius: 6.0,
+    radius: 5.5,
     isGateway: false,
     riskScore: 48,
     riskLevel: 'Medium',
@@ -524,9 +533,9 @@ export const NETWORK_NODES_3D = [
     id: 'TYO',
     name: 'Tokyo',
     country: 'JP',
-    x: 365, y: -60, z: -110,
+    x: 365, y: -60, z: -120,
     group: 'asia',
-    radius: 6.5,
+    radius: 7.4,
     isGateway: true,
     riskScore: 27,
     riskLevel: 'Low',
@@ -537,53 +546,117 @@ export const NETWORK_NODES_3D = [
   }
 ]
 
-// 55 Freight Corridors (pair of node indices)
-// Divided into clean intra-regional clusters and inter-continental trade bridges
+// ============================================================================
+// 55 Multimodal Freight Corridors with 3 Distinct Connection Types:
+// 1. 'local': Thin, subtle intra-cluster line (0.16 alpha)
+// 2. 'major': Thicker, brighter intra-cluster logistics arterial (0.38 alpha)
+// 3. 'intercontinental': Animated 3D curved arc with moving data pulses
+// ============================================================================
 export const NETWORK_EDGES_3D = [
-  // --- North America Intra-Cluster (0 - 9) ---
-  [0, 1], [0, 2], [2, 3], [0, 4], [0, 5], [5, 6], [6, 8], [4, 5], [4, 7], [4, 9], [7, 8], [7, 9],
+  // --- North America Regional Connections (0 - 9) ---
+  { u: 0, v: 1, type: 'major', name: 'LA–Long Beach Harbor Arterial' },
+  { u: 0, v: 2, type: 'local', name: 'California Coastal Rail' },
+  { u: 2, v: 3, type: 'local', name: 'Pacific Northwest Feeder' },
+  { u: 0, v: 4, type: 'major', name: 'BNSF Transcon Rail Corridor' },
+  { u: 0, v: 5, type: 'major', name: 'I-10 Southwest Freight Trunk' },
+  { u: 5, v: 6, type: 'major', name: 'Texas Triangle Petrochem Corridor' },
+  { u: 6, v: 8, type: 'local', name: 'Gulf–Atlantic Coastal Route' },
+  { u: 4, v: 5, type: 'major', name: 'Central Continental Rail Spine' },
+  { u: 4, v: 7, type: 'major', name: 'Midwest–Atlantic Express Rail' },
+  { u: 4, v: 9, type: 'local', name: 'Great Lakes Cross-Border Feeder' },
+  { u: 7, v: 8, type: 'major', name: 'Eastern Seaboard Intermodal Corridor' },
+  { u: 7, v: 9, type: 'local', name: 'Northeast Trans-Border Line' },
 
-  // --- Europe Intra-Cluster (10 - 16) ---
-  [10, 11], [10, 12], [10, 13], [10, 14], [13, 12], [13, 11], [13, 15], [15, 16], [11, 14],
+  // --- Europe Regional Connections (10 - 16) ---
+  { u: 10, v: 11, type: 'major', name: 'Rhine–Scheldt Delta Corridor' },
+  { u: 10, v: 12, type: 'major', name: 'North Sea Freight Arterial' },
+  { u: 10, v: 13, type: 'major', name: 'Rhine Alpine Industrial Spine' },
+  { u: 10, v: 14, type: 'major', name: 'Channel Short-Sea Express' },
+  { u: 13, v: 12, type: 'local', name: 'Northern German Rail Link' },
+  { u: 13, v: 11, type: 'local', name: 'Central European Feeder' },
+  { u: 13, v: 15, type: 'major', name: 'Trans-Alpine Rail Corridor' },
+  { u: 15, v: 16, type: 'local', name: 'Western Mediterranean Coastal Route' },
+  { u: 11, v: 14, type: 'local', name: 'Scheldt–Thames Feeder' },
 
-  // --- India Intra-Cluster (17 - 24: NH 16 Focus) ---
-  [17, 18], [17, 19], [17, 23], [18, 19], [19, 20], [20, 21], [21, 22], [22, 23], [20, 22], [20, 24], [24, 23],
+  // --- India Regional Network (17 - 24: NH 16 Focus) ---
+  { u: 17, v: 18, type: 'major', name: 'Western Dedicated Freight Corridor (DFC)' },
+  { u: 17, v: 19, type: 'major', name: 'Mumbai–Hyderabad Industrial Trunk' },
+  { u: 17, v: 23, type: 'major', name: 'Trans-Deccan Southern Corridor' },
+  { u: 17, v: 20, type: 'major', name: 'Mumbai–Vijayawada Freight Link' },
+  { u: 18, v: 19, type: 'local', name: 'North–Central Rail Arterial' },
+  { u: 19, v: 20, type: 'major', name: 'NH 65 Hyderabad–Vijayawada Expressway' },
+  { u: 20, v: 21, type: 'local', name: 'NH 16 Vijayawada–Guntur Agro Connector' },
+  { u: 21, v: 22, type: 'local', name: 'NH 16 Guntur–Nellore Highway Spine' },
+  { u: 22, v: 23, type: 'major', name: 'NH 16 Nellore–Chennai Port Expressway' },
+  { u: 20, v: 22, type: 'local', name: 'NH 16 Central Andhra Feeder' },
+  { u: 20, v: 24, type: 'major', name: 'NH 16 Visakhapatnam Coastal Highway' },
+  { u: 20, v: 23, type: 'major', name: 'Vijayawada–Chennai Grand Trunk Rail' },
+  { u: 24, v: 23, type: 'local', name: 'Bay of Bengal Coastal Shipping' },
 
-  // --- Asia-Pacific Intra-Cluster (25 - 32) ---
-  [25, 27], [25, 26], [26, 28], [28, 29], [29, 30], [26, 30], [25, 31], [31, 32], [25, 32],
+  // --- Asia-Pacific Regional Network (25 - 32) ---
+  { u: 25, v: 27, type: 'local', name: 'Yangtze River Delta Feeder' },
+  { u: 25, v: 26, type: 'major', name: 'East China Coastal Maritime Trunk' },
+  { u: 26, v: 28, type: 'major', name: 'Greater Bay Area Multimodal Link' },
+  { u: 28, v: 29, type: 'major', name: 'South China Sea Air/Sea Arterial' },
+  { u: 29, v: 30, type: 'local', name: 'Mekong Transshipment Feeder' },
+  { u: 26, v: 30, type: 'local', name: 'Pearl River–Vietnam Express' },
+  { u: 25, v: 31, type: 'major', name: 'Yellow Sea Maritime Corridor' },
+  { u: 31, v: 32, type: 'major', name: 'Korea Strait High-Tech Route' },
+  { u: 25, v: 32, type: 'local', name: 'East Sea Express Cargo' },
 
-  // --- Inter-Continental Trade Corridors (Bridges) ---
-  // Trans-Pacific Corridors (Asia <-> North America)
-  [25, 0],  // Shanghai <-> Los Angeles
-  [32, 0],  // Tokyo <-> Los Angeles
-  [31, 3],  // Busan <-> Seattle
-  [26, 1],  // Shenzhen <-> Long Beach
-
-  // Asia - India Ocean Corridors
-  [29, 23], // Singapore <-> Chennai
-  [29, 17], // Singapore <-> Mumbai
-  [28, 24], // Hong Kong <-> Visakhapatnam
-
-  // India - Europe Corridors (Suez / Mediterranean / Air)
-  [17, 10], // Mumbai <-> Rotterdam
-  [17, 15], // Mumbai <-> Genoa
-  [18, 13], // Delhi <-> Frankfurt
-
-  // Trans-Atlantic Corridors (Europe <-> North America)
-  [10, 7],  // Rotterdam <-> New York
-  [14, 7],  // London <-> New York
-  [12, 4],  // Hamburg <-> Chicago
-  [11, 8]   // Antwerp <-> Savannah
+  // --- Intercontinental Corridors (Curved 3D Arcs + Slow Moving Data Pulses) ---
+  { u: 25, v: 0,  type: 'intercontinental', name: 'Trans-Pacific Mega-Trunk (Shanghai ↔ LA)' },
+  { u: 32, v: 0,  type: 'intercontinental', name: 'Pacific Great Circle Route (Tokyo ↔ LA)' },
+  { u: 31, v: 3,  type: 'intercontinental', name: 'Northern Pacific Gateway (Busan ↔ Seattle)' },
+  { u: 26, v: 1,  type: 'intercontinental', name: 'Trans-Pacific Tech Express (Shenzhen ↔ Long Beach)' },
+  { u: 29, v: 23, type: 'intercontinental', name: 'Strait of Malacca–Bay of Bengal (Singapore ↔ Chennai)' },
+  { u: 29, v: 17, type: 'intercontinental', name: 'Indian Ocean Maritime Highway (Singapore ↔ Mumbai)' },
+  { u: 28, v: 24, type: 'intercontinental', name: 'East Asia–Vizag Maritime Bridge (HK ↔ Visakhapatnam)' },
+  { u: 17, v: 10, type: 'intercontinental', name: 'Suez Maritime Trunk Corridor (Mumbai ↔ Rotterdam)' },
+  { u: 17, v: 15, type: 'intercontinental', name: 'Mediterranean Maritime Route (Mumbai ↔ Genoa)' },
+  { u: 18, v: 13, type: 'intercontinental', name: 'Indo-European Air Cargo Bridge (Delhi ↔ Frankfurt)' },
+  { u: 10, v: 7,  type: 'intercontinental', name: 'North Atlantic Ocean Highway (Rotterdam ↔ New York)' },
+  { u: 14, v: 7,  type: 'intercontinental', name: 'Transatlantic Distribution Trunk (London ↔ New York)' },
+  { u: 12, v: 4,  type: 'intercontinental', name: 'Hamburg–Chicago Intermodal Link (Hamburg ↔ Chicago)' },
+  { u: 11, v: 8,  type: 'intercontinental', name: 'Antwerp–Savannah Container Express (Antwerp ↔ Savannah)' }
 ]
 
 // Precompute degree and neighbors map for every node
 const NODE_NEIGHBORS = Array.from({ length: NETWORK_NODES_3D.length }, () => [])
-NETWORK_EDGES_3D.forEach(([u, v]) => {
+NETWORK_EDGES_3D.forEach(({ u, v }) => {
   if (u < NETWORK_NODES_3D.length && v < NETWORK_NODES_3D.length) {
-    NODE_NEIGHBORS[u].push(v)
-    NODE_NEIGHBORS[v].push(u)
+    if (!NODE_NEIGHBORS[u].includes(v)) NODE_NEIGHBORS[u].push(v)
+    if (!NODE_NEIGHBORS[v].includes(u)) NODE_NEIGHBORS[v].push(u)
   }
 })
+
+// Fixed 3D ambient data particles for authentic motion parallax
+const AMBIENT_PARTICLES_3D = [
+  { x: -320, y: -120, z: -80, size: 1.1 },
+  { x: -240, y: 110, z: -40, size: 1.0 },
+  { x: -160, y: -180, z: 60, size: 1.3 },
+  { x: -80, y: 140, z: 120, size: 1.0 },
+  { x: 30, y: -190, z: 80, size: 1.2 },
+  { x: 120, y: 160, z: 140, size: 1.1 },
+  { x: 210, y: -130, z: -60, size: 1.0 },
+  { x: 310, y: 80, z: -90, size: 1.4 },
+  { x: -280, y: 40, z: 100, size: 1.0 },
+  { x: 160, y: -60, z: 180, size: 1.2 },
+  { x: -50, y: -80, z: -150, size: 1.1 },
+  { x: 280, y: 120, z: 30, size: 1.0 },
+  { x: -190, y: 20, z: 160, size: 1.2 },
+  { x: 70, y: 90, z: -120, size: 1.3 },
+  { x: 340, y: -40, z: 70, size: 1.0 },
+  { x: -110, y: -140, z: -100, size: 1.2 }
+]
+
+// Geometric centers of the 4 regional clusters for volumetric halos
+const CLUSTER_CENTERS = [
+  { group: 'na', x: -225, y: 0, z: -45, color: 'rgba(251, 191, 36, 0.06)' },
+  { group: 'europe', x: -65, y: -105, z: 55, color: 'rgba(192, 132, 252, 0.06)' },
+  { group: 'india', x: 25, y: 80, z: 145, color: 'rgba(52, 211, 153, 0.08)' },
+  { group: 'asia', x: 260, y: 10, z: -25, color: 'rgba(56, 189, 248, 0.07)' }
+]
 
 // Region metadata
 const REGION_CONFIG = {
@@ -607,7 +680,7 @@ export default function Network3DVisual() {
   const projectedNodesRef = useRef([])
   const zoomLevelRef = useRef(1.0)
   const selectedRegionRef = useRef('all')
-  const anglesRef = useRef({ targetY: 0.22, targetX: -0.16 })
+  const anglesRef = useRef({ targetY: 0.24, targetX: -0.15, currentY: 0.24, currentX: -0.15 })
 
   // Keep refs in sync for 60fps render loop
   useEffect(() => {
@@ -629,7 +702,8 @@ export default function Network3DVisual() {
     setSelectedRegion('all')
     setSelectedNode(null)
     setIsRotating(true)
-    anglesRef.current = { targetY: 0.22, targetX: -0.16 }
+    anglesRef.current.targetY = 0.24
+    anglesRef.current.targetX = -0.15
   }
 
   const handleZoomIn = () => {
@@ -651,15 +725,20 @@ export default function Network3DVisual() {
   const handleRegionClick = (regionKey) => {
     setSelectedRegion(regionKey)
     if (regionKey === 'india') {
-      anglesRef.current = { targetY: 0.08, targetX: -0.12 }
+      anglesRef.current.targetY = 0.08
+      anglesRef.current.targetX = -0.12
     } else if (regionKey === 'asia') {
-      anglesRef.current = { targetY: -0.35, targetX: -0.14 }
+      anglesRef.current.targetY = -0.32
+      anglesRef.current.targetX = -0.14
     } else if (regionKey === 'europe') {
-      anglesRef.current = { targetY: 0.38, targetX: -0.22 }
+      anglesRef.current.targetY = 0.36
+      anglesRef.current.targetX = -0.22
     } else if (regionKey === 'na') {
-      anglesRef.current = { targetY: 0.65, targetX: -0.14 }
+      anglesRef.current.targetY = 0.62
+      anglesRef.current.targetX = -0.14
     } else {
-      anglesRef.current = { targetY: 0.22, targetX: -0.16 }
+      anglesRef.current.targetY = 0.24
+      anglesRef.current.targetX = -0.15
     }
   }
 
@@ -669,8 +748,6 @@ export default function Network3DVisual() {
 
     const ctx = canvas.getContext('2d')
     let animationId = null
-    let angleY = anglesRef.current.targetY
-    let angleX = anglesRef.current.targetX
     let isDragging = false
     let lastMouseX = 0
     let lastMouseY = 0
@@ -709,7 +786,6 @@ export default function Network3DVisual() {
         let found = null
         for (const node of projectedNodesRef.current) {
           const dist = Math.hypot(node.px - mx, node.py - my)
-          // Hit radius accounts for node scale and padding
           if (dist < Math.max(14, node.radius * node.scale + 12)) {
             found = node
             break
@@ -741,9 +817,8 @@ export default function Network3DVisual() {
 
       if (clicked) {
         setSelectedNode(NETWORK_NODES_3D[clicked.index])
-        setIsRotating(false) // pause orbit while inspecting
+        setIsRotating(false)
       } else {
-        // Clicked outside on canvas background: close inspector
         setSelectedNode(null)
       }
     }
@@ -760,20 +835,23 @@ export default function Network3DVisual() {
     canvas.addEventListener('click', onClick)
     canvas.addEventListener('wheel', onWheel, { passive: false })
 
-    // ==========================================
-    // 60FPS 3D RENDER LOOP
-    // ==========================================
+    // ========================================================================
+    // 60FPS Presentation Render Loop
+    // ========================================================================
     const render = () => {
-      pulseTime += 0.02
+      pulseTime += 0.016
 
-      // Presentation-grade slow auto-orbit
-      if (!isDragging && isRotating && !selectedIndexRef.current) {
-        anglesRef.current.targetY += 0.0006
+      // Slow, dignified auto-orbit: pauses during drag, hover, or hub telemetry inspection
+      if (!isDragging && isRotating && !selectedIndexRef.current && hoveredIndexRef.current === null) {
+        anglesRef.current.targetY += 0.0005
       }
 
-      // Smooth inertia damping
-      angleY += (anglesRef.current.targetY - angleY) * 0.085
-      angleX += (anglesRef.current.targetX - angleX) * 0.085
+      // Smooth camera interpolation
+      anglesRef.current.currentY += (anglesRef.current.targetY - anglesRef.current.currentY) * 0.08
+      anglesRef.current.currentX += (anglesRef.current.targetX - anglesRef.current.currentX) * 0.08
+
+      const angleY = anglesRef.current.currentY
+      const angleX = anglesRef.current.currentX
 
       const rect = canvas.getBoundingClientRect()
       const width = rect.width
@@ -781,9 +859,9 @@ export default function Network3DVisual() {
       const cx = width / 2
       const cy = height / 2
 
-      // Spatial focal length calibrated for wide quad-cluster separation
-      const cameraDistance = 640
-      const fov = 580 * zoomLevelRef.current
+      // Calibrated 3D focal perspective
+      const cameraDistance = 650
+      const fov = 590 * zoomLevelRef.current
 
       ctx.clearRect(0, 0, width, height)
 
@@ -791,24 +869,87 @@ export default function Network3DVisual() {
       const cosY = Math.cos(angleY), sinY = Math.sin(angleY)
       const cosX = Math.cos(angleX), sinX = Math.sin(angleX)
 
-      // Project 3D nodes to 2D screen coordinates
+      // Helper function to project any 3D point (x, y, z) into 2D canvas coordinates
+      const project3D = (x, y, z) => {
+        const x1 = x * cosY - z * sinY
+        const z1 = z * cosY + x * sinY
+        const y1 = y * cosX - z1 * sinX
+        const z2 = z1 * cosX + y * sinX
+        const scale = fov / (cameraDistance + z2)
+        return {
+          px: cx + x1 * scale,
+          py: cy + y1 * scale,
+          scale,
+          zDepth: z2
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // A. Draw Subtle 3D Perspective Ground Plane Grid (anchors 3D depth)
+      // ----------------------------------------------------------------------
+      const floorY = 210
+      const gridZ = [-180, -60, 60, 180, 300]
+      const gridX = [-360, -180, 0, 180, 360]
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.035)'
+      ctx.lineWidth = 1
+
+      // Horizontal ground lines
+      gridZ.forEach((gz) => {
+        const pA = project3D(-380, floorY, gz)
+        const pB = project3D(380, floorY, gz)
+        ctx.beginPath()
+        ctx.moveTo(pA.px, pA.py)
+        ctx.lineTo(pB.px, pB.py)
+        ctx.stroke()
+      })
+
+      // Longitudinal ground lines
+      gridX.forEach((gx) => {
+        const pA = project3D(gx, floorY, -190)
+        const pB = project3D(gx, floorY, 310)
+        ctx.beginPath()
+        ctx.moveTo(pA.px, pA.py)
+        ctx.lineTo(pB.px, pB.py)
+        ctx.stroke()
+      })
+
+      // ----------------------------------------------------------------------
+      // B. Draw Faint Ambient 3D Data Dust Particles (subtle parallax)
+      // ----------------------------------------------------------------------
+      AMBIENT_PARTICLES_3D.forEach((part) => {
+        const proj = project3D(part.x, part.y, part.z)
+        const alpha = Math.max(0.04, Math.min(0.18, 0.14 - proj.zDepth * 0.0003))
+        ctx.beginPath()
+        ctx.arc(proj.px, proj.py, part.size * proj.scale, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(148, 163, 184, ${alpha})`
+        ctx.fill()
+      })
+
+      // ----------------------------------------------------------------------
+      // C. Draw Volumetric Cluster Halos (Digital Twin regional presence)
+      // ----------------------------------------------------------------------
+      CLUSTER_CENTERS.forEach((cluster) => {
+        const proj = project3D(cluster.x, cluster.y, cluster.z)
+        const haloRadius = 140 * proj.scale
+        const halo = ctx.createRadialGradient(proj.px, proj.py, 0, proj.px, proj.py, haloRadius)
+        halo.addColorStop(0, cluster.color)
+        halo.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = halo
+        ctx.beginPath()
+        ctx.arc(proj.px, proj.py, haloRadius, 0, Math.PI * 2)
+        ctx.fill()
+      })
+
+      // ----------------------------------------------------------------------
+      // D. Project All 33 Hub Nodes into 2D Coordinates
+      // ----------------------------------------------------------------------
       const activeFilter = selectedRegionRef.current
       const activeHoverIndex = hoveredIndexRef.current
       const activeSelectIndex = selectedIndexRef.current
 
       const projectedNodes = NETWORK_NODES_3D.map((node, index) => {
-        // Rotate around Y-axis
-        const x1 = node.x * cosY - node.z * sinY
-        const z1 = node.z * cosY + node.x * sinY
-
-        // Rotate around X-axis
-        const y1 = node.y * cosX - z1 * sinX
-        const z2 = z1 * cosX + node.y * sinX
-
-        const scale = fov / (cameraDistance + z2)
-        const px = cx + x1 * scale
-        const py = cy + y1 * scale
-
+        const proj = project3D(node.x, node.y, node.z)
         const isFiltered = activeFilter === 'all' || node.group === activeFilter
         const isHovered = activeHoverIndex === index
         const isSelected = activeSelectIndex === index
@@ -819,10 +960,10 @@ export default function Network3DVisual() {
         return {
           ...node,
           index,
-          px,
-          py,
-          scale,
-          zDepth: z2,
+          px: proj.px,
+          py: proj.py,
+          scale: proj.scale,
+          zDepth: proj.zDepth,
           isFiltered,
           isHovered,
           isSelected,
@@ -832,104 +973,136 @@ export default function Network3DVisual() {
 
       projectedNodesRef.current = projectedNodes
 
-      // Determine focus state
       const hasActiveSelection = activeSelectIndex !== null || activeHoverIndex !== null
       const focusIndex = activeSelectIndex !== null ? activeSelectIndex : activeHoverIndex
 
-      // ----------------------------------------------------
-      // 1. Render Freight Corridors (Lines)
-      // ----------------------------------------------------
-      NETWORK_EDGES_3D.forEach(([i1, i2]) => {
-        const p1 = projectedNodes[i1]
-        const p2 = projectedNodes[i2]
+      // ----------------------------------------------------------------------
+      // E. Render Multimodal Freight Corridors (3 Distinct Visual Styles)
+      // ----------------------------------------------------------------------
+      NETWORK_EDGES_3D.forEach((edge, edgeIdx) => {
+        const p1 = projectedNodes[edge.u]
+        const p2 = projectedNodes[edge.v]
         if (!p1 || !p2) return
 
         const isConnectedToFocus =
-          hasActiveSelection && (i1 === focusIndex || i2 === focusIndex)
-        const isInterClusterBridge = p1.group !== p2.group
-        const isRegionalMatch =
-          activeFilter === 'all' || (p1.group === activeFilter && p2.group === activeFilter)
+          hasActiveSelection && (edge.u === focusIndex || edge.v === focusIndex)
 
-        ctx.beginPath()
-        ctx.moveTo(p1.px, p1.py)
-        ctx.lineTo(p2.px, p2.py)
+        // Dim unrelated routes when focus is active
+        const dimFactor = hasActiveSelection && !isConnectedToFocus ? 0.03 : 1.0
+        const isFilterMatch = activeFilter === 'all' || (p1.group === activeFilter && p2.group === activeFilter)
+        const filterFactor = !isFilterMatch && activeFilter !== 'all' ? 0.08 : 1.0
 
-        if (isConnectedToFocus) {
-          // Highlighted active GCN connection
-          ctx.strokeStyle = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
-          ctx.lineWidth = 2.6
-          ctx.shadowColor = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
-          ctx.shadowBlur = 12
-          ctx.stroke()
-          ctx.shadowBlur = 0
+        // Depth alpha falloff
+        const avgDepth = (p1.zDepth + p2.zDepth) / 2
+        const depthAlpha = Math.max(0.3, Math.min(1.1, 1 - avgDepth * 0.0012))
 
-          // Glowing energy pulse moving along active corridor
-          const pulseOffset = (pulseTime * 0.8 + (i1 + i2) * 0.15) % 1
-          const pulseX = p1.px + (p2.px - p1.px) * pulseOffset
-          const pulseY = p1.py + (p2.py - p1.py) * pulseOffset
+        // --------------------------------------------------------------------
+        // Style 1: Intercontinental Connections (Curved 3D Arcs + Data Pulses)
+        // --------------------------------------------------------------------
+        if (edge.type === 'intercontinental') {
+          // Calculate 3D arched control point
+          const mx = (NETWORK_NODES_3D[edge.u].x + NETWORK_NODES_3D[edge.v].x) / 2
+          const my = (NETWORK_NODES_3D[edge.u].y + NETWORK_NODES_3D[edge.v].y) / 2
+          const mz = (NETWORK_NODES_3D[edge.u].z + NETWORK_NODES_3D[edge.v].z) / 2
+          const d3d = Math.hypot(
+            NETWORK_NODES_3D[edge.u].x - NETWORK_NODES_3D[edge.v].x,
+            NETWORK_NODES_3D[edge.u].y - NETWORK_NODES_3D[edge.v].y,
+            NETWORK_NODES_3D[edge.u].z - NETWORK_NODES_3D[edge.v].z
+          )
+          const ctrlX = mx
+          const ctrlY = my - d3d * 0.22
+          const ctrlZ = mz + d3d * 0.18
+          const ctrlProj = project3D(ctrlX, ctrlY, ctrlZ)
 
           ctx.beginPath()
-          ctx.arc(pulseX, pulseY, 3, 0, Math.PI * 2)
-          ctx.fillStyle = '#ffffff'
-          ctx.shadowColor = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
-          ctx.shadowBlur = 8
-          ctx.fill()
-          ctx.shadowBlur = 0
-        } else {
-          // Base corridor styling
-          let edgeAlpha = 0.22
-          if (hasActiveSelection) {
-            edgeAlpha = 0.05 // Dim unrelated edges to reduce clutter
-          } else if (!isRegionalMatch && activeFilter !== 'all') {
-            edgeAlpha = 0.06
-          } else if (isInterClusterBridge) {
-            edgeAlpha = 0.28
+          ctx.moveTo(p1.px, p1.py)
+          ctx.quadraticCurveTo(ctrlProj.px, ctrlProj.py, p2.px, p2.py)
+
+          if (isConnectedToFocus) {
+            // Actively focused intercontinental corridor
+            ctx.strokeStyle = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
+            ctx.lineWidth = 2.8
+            ctx.shadowColor = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
+            ctx.shadowBlur = 10
+            ctx.stroke()
+            ctx.shadowBlur = 0
+          } else {
+            // Calm, glowing cyber arc
+            const baseAlpha = Math.max(0.04, 0.32 * depthAlpha * dimFactor * filterFactor)
+            ctx.strokeStyle = `rgba(56, 189, 248, ${baseAlpha})`
+            ctx.lineWidth = Math.max(1, 1.4 * ((p1.scale + p2.scale) / 2))
+            ctx.stroke()
           }
 
-          // Depth falloff
-          const avgDepth = (p1.zDepth + p2.zDepth) / 2
-          const depthFactor = Math.max(0.3, Math.min(1.1, 1 - avgDepth * 0.0015))
-          const finalAlpha = Math.max(0.04, edgeAlpha * depthFactor)
+          // Slow Moving Data Pulse along the 3D arc
+          if (!hasActiveSelection || isConnectedToFocus) {
+            const t = (pulseTime * 0.1 + (edgeIdx * 0.13)) % 1
+            const bx = (1 - t) ** 2 * NETWORK_NODES_3D[edge.u].x + 2 * (1 - t) * t * ctrlX + t ** 2 * NETWORK_NODES_3D[edge.v].x
+            const by = (1 - t) ** 2 * NETWORK_NODES_3D[edge.u].y + 2 * (1 - t) * t * ctrlY + t ** 2 * NETWORK_NODES_3D[edge.v].y
+            const bz = (1 - t) ** 2 * NETWORK_NODES_3D[edge.u].z + 2 * (1 - t) * t * ctrlZ + t ** 2 * NETWORK_NODES_3D[edge.v].z
+            const pulseProj = project3D(bx, by, bz)
 
-          if (isInterClusterBridge) {
-            // Inter-continental trade bridge: dashed / cyber cyan
-            ctx.strokeStyle = `rgba(56, 189, 248, ${finalAlpha * 1.3})`
-            ctx.lineWidth = Math.max(1, 1.4 * ((p1.scale + p2.scale) / 2))
-            ctx.setLineDash([4, 4])
+            ctx.beginPath()
+            ctx.arc(pulseProj.px, pulseProj.py, Math.max(1.8, 2.4 * pulseProj.scale), 0, Math.PI * 2)
+            ctx.fillStyle = isConnectedToFocus ? (activeSelectIndex !== null ? '#fbbf24' : '#ffffff') : '#38bdf8'
+            ctx.shadowColor = isConnectedToFocus ? '#fbbf24' : '#38bdf8'
+            ctx.shadowBlur = 6
+            ctx.fill()
+            ctx.shadowBlur = 0
+          }
+        }
+
+        // --------------------------------------------------------------------
+        // Style 2 & 3: Local vs Major Intra-Cluster Connections (Straight)
+        // --------------------------------------------------------------------
+        else {
+          ctx.beginPath()
+          ctx.moveTo(p1.px, p1.py)
+          ctx.lineTo(p2.px, p2.py)
+
+          if (isConnectedToFocus) {
+            // Focused intra-cluster route
+            ctx.strokeStyle = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
+            ctx.lineWidth = 2.6
+            ctx.shadowColor = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
+            ctx.shadowBlur = 10
             ctx.stroke()
-            ctx.setLineDash([])
+            ctx.shadowBlur = 0
 
-            // Periodic ambient packet gliding across continents
-            if (!hasActiveSelection) {
-              const ambientPulse = (pulseTime * 0.25 + (i1 * 3 + i2)) % 1
-              const ax = p1.px + (p2.px - p1.px) * ambientPulse
-              const ay = p1.py + (p2.py - p1.py) * ambientPulse
-              ctx.beginPath()
-              ctx.arc(ax, ay, 1.8, 0, Math.PI * 2)
-              ctx.fillStyle = `rgba(56, 189, 248, ${finalAlpha * 2})`
-              ctx.fill()
-            }
+            // Animated light pulse on focused corridor
+            const t = (pulseTime * 0.7 + edgeIdx * 0.2) % 1
+            const pulseX = p1.px + (p2.px - p1.px) * t
+            const pulseY = p1.py + (p2.py - p1.py) * t
+
+            ctx.beginPath()
+            ctx.arc(pulseX, pulseY, 2.5, 0, Math.PI * 2)
+            ctx.fillStyle = '#ffffff'
+            ctx.shadowColor = activeSelectIndex !== null ? '#fbbf24' : '#38bdf8'
+            ctx.shadowBlur = 6
+            ctx.fill()
+            ctx.shadowBlur = 0
           } else {
-            // Regional intra-cluster connection: subtle tinted solid line
-            const grpColor =
-              p1.group === 'india'
-                ? `rgba(52, 211, 153, ${finalAlpha * 1.2})`
-                : p1.group === 'europe'
-                ? `rgba(192, 132, 252, ${finalAlpha * 1.1})`
-                : p1.group === 'na'
-                ? `rgba(251, 191, 36, ${finalAlpha * 1.1})`
-                : `rgba(56, 189, 248, ${finalAlpha})`
+            // Style 2: Major Logistics Corridor (Thicker, brighter)
+            // Style 3: Local Connection (Thin, subtle solid line)
+            const isMajor = edge.type === 'major'
+            const baseAlpha = isMajor ? 0.36 : 0.16
+            const finalAlpha = Math.max(0.04, baseAlpha * depthAlpha * dimFactor * filterFactor)
+
+            let grpColor = `rgba(56, 189, 248, ${finalAlpha})`
+            if (p1.group === 'india') grpColor = `rgba(52, 211, 153, ${finalAlpha})`
+            else if (p1.group === 'europe') grpColor = `rgba(192, 132, 252, ${finalAlpha})`
+            else if (p1.group === 'na') grpColor = `rgba(251, 191, 36, ${finalAlpha})`
 
             ctx.strokeStyle = grpColor
-            ctx.lineWidth = Math.max(0.9, 1.3 * ((p1.scale + p2.scale) / 2))
+            ctx.lineWidth = Math.max(0.8, (isMajor ? 1.9 : 1.0) * ((p1.scale + p2.scale) / 2))
             ctx.stroke()
           }
         }
       })
 
-      // ----------------------------------------------------
-      // 2. Render 3D Logistics Hub Nodes (Back-to-Front Occlusion)
-      // ----------------------------------------------------
+      // ----------------------------------------------------------------------
+      // F. Render 3D Logistics Hub Nodes (Back-to-Front Occlusion)
+      // ----------------------------------------------------------------------
       const sortedNodes = [...projectedNodes].sort((a, b) => b.zDepth - a.zDepth)
 
       sortedNodes.forEach((node) => {
@@ -937,14 +1110,14 @@ export default function Network3DVisual() {
           (hasActiveSelection && !node.isHovered && !node.isSelected && !node.isNeighborOfActive) ||
           (!node.isFiltered && activeFilter !== 'all')
 
-        const baseAlpha = isDimmed ? 0.18 : 1.0
-        const depthAlpha = Math.max(0.35, Math.min(1.0, 0.9 - node.zDepth * 0.0016)) * baseAlpha
+        const baseAlpha = isDimmed ? 0.12 : 1.0
+        const depthAlpha = Math.max(0.35, Math.min(1.0, 0.95 - node.zDepth * 0.0014)) * baseAlpha
 
         const isHighlighted = node.isHovered || node.isSelected
-        const scaleMult = isHighlighted ? 1.45 : node.isNeighborOfActive ? 1.2 : node.isGateway ? 1.1 : 0.95
+        const scaleMult = isHighlighted ? 1.45 : node.isNeighborOfActive ? 1.2 : node.isGateway ? 1.15 : 0.92
         const nodeRadius = Math.max(3.2, node.radius * node.scale * scaleMult)
 
-        // Color thematic mapping
+        // Regional Theme Colors
         let primaryColor = '#38bdf8'
         let glowColor = 'rgba(56, 189, 248, 0.8)'
 
@@ -959,29 +1132,29 @@ export default function Network3DVisual() {
           glowColor = 'rgba(251, 191, 36, 0.8)'
         }
 
-        // Pulse ring on selected or hovered node
+        // Active Focus Pulse Ring
         if (isHighlighted) {
           const pulseR = nodeRadius + (Math.sin(pulseTime * 4) + 1) * 4.5
           ctx.beginPath()
           ctx.arc(node.px, node.py, pulseR, 0, Math.PI * 2)
-          ctx.strokeStyle = node.isSelected ? 'rgba(251, 191, 36, 0.85)' : 'rgba(56, 189, 248, 0.85)'
+          ctx.strokeStyle = node.isSelected ? 'rgba(251, 191, 36, 0.9)' : 'rgba(56, 189, 248, 0.9)'
           ctx.lineWidth = 1.8
           ctx.stroke()
         } else if (node.isGateway && !isDimmed) {
           // Subtle breathing beacon on primary gateway hubs
-          const beaconR = nodeRadius + (Math.sin(pulseTime * 2 + node.index) + 1) * 2
+          const beaconR = nodeRadius + (Math.sin(pulseTime * 2 + node.index) + 1) * 2.2
           ctx.beginPath()
           ctx.arc(node.px, node.py, beaconR, 0, Math.PI * 2)
           ctx.strokeStyle = primaryColor
-          ctx.globalAlpha = 0.22 * depthAlpha
+          ctx.globalAlpha = 0.28 * depthAlpha
           ctx.lineWidth = 1
           ctx.stroke()
           ctx.globalAlpha = 1.0
         }
 
-        // Radial Glow
-        if (!isDimmed) {
-          const glowRadius = nodeRadius * (isHighlighted ? 3.2 : 2.2)
+        // Soft Radial Glow on Gateway Hubs or Highlighted Nodes
+        if (!isDimmed && (node.isGateway || isHighlighted || node.isNeighborOfActive)) {
+          const glowRadius = nodeRadius * (isHighlighted ? 3.4 : 2.4)
           const glow = ctx.createRadialGradient(node.px, node.py, 0, node.px, node.py, glowRadius)
           glow.addColorStop(0, glowColor)
           glow.addColorStop(1, 'rgba(0,0,0,0)')
@@ -1001,19 +1174,14 @@ export default function Network3DVisual() {
         ctx.globalAlpha = depthAlpha
         ctx.fill()
 
-        ctx.strokeStyle = isHighlighted ? (node.isSelected ? '#fbbf24' : '#38bdf8') : '#0b1120'
+        ctx.strokeStyle = isHighlighted ? (node.isSelected ? '#fbbf24' : '#38bdf8') : '#080d1a'
         ctx.lineWidth = isHighlighted ? 2.2 : 1.2
         ctx.stroke()
         ctx.globalAlpha = 1.0
 
-        // ==========================================
-        // 3. Clean Text Labels (Uncluttered Rules)
-        // Show ONLY:
-        // - Major Gateway hubs by default
-        // - Hovered / Selected node
-        // - Immediate 1-hop neighbors of active hub
-        // - When region is explicitly filtered
-        // ==========================================
+        // --------------------------------------------------------------------
+        // Clean Text Labels (Uncluttered Rules: Major Hubs Only by Default)
+        // --------------------------------------------------------------------
         const shouldShowLabel =
           isHighlighted ||
           node.isNeighborOfActive ||
@@ -1032,10 +1200,10 @@ export default function Network3DVisual() {
           const labelX = node.px + nodeRadius + 6
           const labelY = node.py + 4
 
-          // Subtle dark pill background for guaranteed legibility
+          // High-contrast pill backdrop
           ctx.fillStyle = isHighlighted
-            ? 'rgba(11, 16, 28, 0.95)'
-            : 'rgba(11, 16, 28, 0.75)'
+            ? 'rgba(11, 17, 32, 0.95)'
+            : 'rgba(11, 17, 32, 0.82)'
           ctx.fillRect(labelX - 4, labelY - 11, textWidth + 8, 15)
 
           ctx.strokeStyle = isHighlighted
@@ -1048,7 +1216,7 @@ export default function Network3DVisual() {
             ? '#ffffff'
             : node.isNeighborOfActive
             ? '#38bdf8'
-            : `rgba(241, 245, 249, ${Math.max(0.65, depthAlpha)})`
+            : `rgba(241, 245, 249, ${Math.max(0.7, depthAlpha)})`
           ctx.fillText(labelText, labelX, labelY)
         }
       })
@@ -1098,7 +1266,7 @@ export default function Network3DVisual() {
           <div className="network-3d-headings">
             <span className="network-3d-title">Global Multimodal Freight Graph</span>
             <span className="network-3d-subtitle">
-              4 Regional Clusters · N=33 Logistics Hubs · E=55 Corridors · GCN Laplacian
+              4 Regional Depth Clusters · N=33 Logistics Hubs · E=55 Corridors · Spectral Laplacian
             </span>
           </div>
         </div>
@@ -1172,10 +1340,10 @@ export default function Network3DVisual() {
 
         {/* Instructions Hint */}
         <div className="network-3d-hint">
-          <Compass size={12} /> Drag to rotate · Scroll to zoom · Click any hub to open deep telemetry
+          <Compass size={12} /> Drag to rotate · Scroll to zoom · Click any hub to focus connection topology
         </div>
 
-        {/* Hover Tooltip (Only when not inspecting side panel) */}
+        {/* Hover Tooltip (Only when side panel is closed) */}
         {hoveredNode && !selectedNode && (
           <div className="network-3d-floating-inspector">
             <div className="inspector-header">
@@ -1219,20 +1387,40 @@ export default function Network3DVisual() {
               </div>
 
               <div className="telemetry-hub-title-row">
-                <h2>{selectedNode.name}</h2>
+                <h2>{selectedNode.name} Logistics Hub</h2>
                 <span className="telemetry-code">{selectedNode.id} · {selectedNode.country}</span>
               </div>
               <span className="telemetry-type">{selectedNode.type}</span>
             </div>
 
             <div className="telemetry-body">
-              {/* Risk Telemetry Metric Card */}
+              {/* Telemetry Summary Cards Grid */}
+              <div className="telemetry-summary-grid">
+                <div className="telemetry-summary-item">
+                  <span className="summary-label">Hub</span>
+                  <span className="summary-val">{selectedNode.name}</span>
+                </div>
+                <div className="telemetry-summary-item">
+                  <span className="summary-label">Region</span>
+                  <span className="summary-val">{selectedNode.region.split(' ')[0]}</span>
+                </div>
+                <div className="telemetry-summary-item">
+                  <span className="summary-label">Connected Corridors</span>
+                  <span className="summary-val highlight-blue">{selectedNodeNeighbors.length} Corridors</span>
+                </div>
+                <div className="telemetry-summary-item">
+                  <span className="summary-label">Network Risk</span>
+                  <span className={`summary-risk-pill ${getRiskBadgeClass(selectedNode.riskScore)}`}>
+                    {selectedNode.riskLevel} ({selectedNode.riskScore}/100)
+                  </span>
+                </div>
+              </div>
+
+              {/* Risk Gauge Bar */}
               <div className="telemetry-metric-card">
                 <div className="metric-row-top">
-                  <span className="metric-label">Network Disruption Score</span>
-                  <span className={`metric-risk-pill ${getRiskBadgeClass(selectedNode.riskScore)}`}>
-                    {selectedNode.riskLevel.toUpperCase()} RISK
-                  </span>
+                  <span className="metric-label">GCN Disruption Vulnerability</span>
+                  <span className="metric-sub">{selectedNode.riskScore}/100</span>
                 </div>
                 <div className="metric-score-bar-wrap">
                   <div
@@ -1240,32 +1428,19 @@ export default function Network3DVisual() {
                     style={{ width: `${selectedNode.riskScore}%` }}
                   />
                 </div>
-                <div className="metric-row-meta">
-                  <span className="score-val">{selectedNode.riskScore} <span className="score-max">/100</span></span>
-                  <span className="score-desc">GCN Spectral Eigenvector Centrality</span>
-                </div>
               </div>
 
-              {/* Modality & Infrastructure */}
+              {/* Multimodal Infrastructure */}
               <div className="telemetry-info-box">
-                <span className="info-box-title">Multimodal Infrastructure</span>
+                <span className="info-box-title">Multimodal Modality</span>
                 <p className="info-box-text">{selectedNode.modality}</p>
               </div>
 
-              {/* GCN Topological Insights */}
-              <div className="telemetry-insight-box">
-                <div className="insight-box-title">
-                  <ShieldCheck size={13} />
-                  <span>Cognitive GCN Topological Assessment</span>
-                </div>
-                <p className="insight-box-text">{selectedNode.insight}</p>
-              </div>
-
-              {/* Connected Freight Corridors (Neighbors) */}
+              {/* Connected Hubs List */}
               <div className="telemetry-neighbors-section">
                 <div className="neighbors-header">
                   <Network size={13} />
-                  <span>Connected Corridors ({selectedNodeNeighbors.length})</span>
+                  <span>Connected Hubs ({selectedNodeNeighbors.length})</span>
                 </div>
                 <div className="neighbors-list">
                   {selectedNodeNeighbors.map((neighbor) => (
@@ -1274,7 +1449,7 @@ export default function Network3DVisual() {
                       type="button"
                       className="neighbor-pill"
                       onClick={() => handleSelectNeighbor(neighbor.index)}
-                      title={`Jump to ${neighbor.name} (${neighbor.region})`}
+                      title={`Jump focus to ${neighbor.name} (${neighbor.region})`}
                     >
                       <span className={`neighbor-dot ${neighbor.group}`} />
                       <span className="neighbor-name">{neighbor.name}</span>
@@ -1284,6 +1459,15 @@ export default function Network3DVisual() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Cognitive GCN Topological Assessment */}
+              <div className="telemetry-insight-box">
+                <div className="insight-box-title">
+                  <ShieldCheck size={13} />
+                  <span>GCN Supply Chain Topological Assessment</span>
+                </div>
+                <p className="insight-box-text">{selectedNode.insight}</p>
               </div>
             </div>
 
@@ -1305,15 +1489,15 @@ export default function Network3DVisual() {
       <div className="network-3d-explanation">
         <Info size={16} className="explanation-icon" />
         <p>
-          <strong>Global Multimodal Supply Chain Network Topology (4 Geographic Clusters):</strong>{' '}
-          The 3D graph visualizes <strong>N=33 logistics hubs</strong> and <strong>E=55 multimodal freight corridors</strong> grouped into India Regional (NH 16 focus), Asia-Pacific, European, and North American networks. Major gateway hubs (★) anchor inter-continental trade corridors. Hover or click any hub to inspect GCN neighborhood feature aggregation and propagation risk scores.
+          <strong>Global Multimodal Supply Chain Network Topology (4 Geographic Depth Layers):</strong>{' '}
+          The 3D graph visualizes <strong>N=33 logistics hubs</strong> and <strong>E=55 multimodal freight corridors</strong> grouped into India Regional (foreground NH 16 spine), Asia-Pacific, European, and North American networks. Major gateway hubs (★) anchor curved intercontinental trade arcs with slow moving data pulses. Clicking any hub isolates its local GCN neighborhood and displays its real-time topological disruption score.
         </p>
       </div>
 
       {/* Visual Legend Bar */}
       <div className="network-3d-legend">
         <span className="n3d-legend-item">
-          <span className="n3d-dot india" /> India Regional (NH 16 Corridor)
+          <span className="n3d-dot india" /> India Regional (NH 16 Spine)
         </span>
         <span className="n3d-legend-item">
           <span className="n3d-dot asia" /> Asia-Pacific Maritime Gateway
@@ -1328,7 +1512,13 @@ export default function Network3DVisual() {
           <span className="n3d-star">★</span> Major Gateway Hub
         </span>
         <span className="n3d-legend-item">
-          <span className="n3d-dash" /> Inter-Continental Bridge
+          <span className="n3d-line-sample major" /> Major Logistics Corridor
+        </span>
+        <span className="n3d-legend-item">
+          <span className="n3d-line-sample local" /> Local Feeder
+        </span>
+        <span className="n3d-legend-item">
+          <span className="n3d-line-sample intercon" /> Intercontinental 3D Arc (Data Pulse)
         </span>
       </div>
     </div>

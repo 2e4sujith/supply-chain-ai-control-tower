@@ -219,18 +219,18 @@
 }
 
 /* ==========================================================================
-   Canvas & 3D Stage (Enlarged to 480px for Panoramic Quad-Cluster Clarity)
+   Canvas & 3D Stage (Enlarged to 490px for Deep 3D Spatial Volume)
    ========================================================================== */
 .network-3d-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 480px;
-  background: radial-gradient(circle at 50% 48%, #111a2e 0%, #060a14 100%);
+  height: 490px;
+  background: radial-gradient(circle at 50% 46%, #0f182b 0%, #050811 100%);
   border: 1px solid #1e293b;
   border-radius: 12px;
   overflow: hidden;
   cursor: grab;
-  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.55);
 }
 
 .network-3d-canvas-wrapper:active {
@@ -252,7 +252,7 @@
   color: #94a3b8;
   font-family: 'JetBrains Mono', monospace;
   pointer-events: none;
-  background: rgba(10, 15, 29, 0.85);
+  background: rgba(10, 15, 29, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 5px 12px;
   border-radius: 6px;
@@ -260,9 +260,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  z-index: 5;
 }
 
-/* Floating Hover Inspector */
+/* Floating Hover Inspector Tooltip */
 .network-3d-floating-inspector {
   position: absolute;
   top: 14px;
@@ -387,8 +388,8 @@
   top: 14px;
   right: 14px;
   bottom: 14px;
-  width: 340px;
-  background: rgba(11, 17, 32, 0.94);
+  width: 350px;
+  background: rgba(11, 17, 32, 0.95);
   border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 12px;
   backdrop-filter: blur(14px);
@@ -501,7 +502,7 @@
 
 .telemetry-hub-title-row h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.3px;
@@ -530,6 +531,57 @@
   flex: 1;
 }
 
+/* Telemetry Summary 2x2 Grid (Hub, Region, Corridors, Risk) */
+.telemetry-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.telemetry-summary-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.summary-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.summary-val.highlight-blue {
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.summary-risk-pill {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.summary-risk-pill.critical { background: rgba(244, 63, 94, 0.2); color: #f43f5e; }
+.summary-risk-pill.high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.summary-risk-pill.medium { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+.summary-risk-pill.low { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+
 /* Risk Score Metric Card */
 .telemetry-metric-card {
   background: rgba(255, 255, 255, 0.03);
@@ -542,7 +594,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .metric-label {
@@ -551,18 +603,12 @@
   color: #94a3b8;
 }
 
-.metric-risk-pill {
-  font-size: 9.5px;
-  font-weight: 800;
+.metric-sub {
+  font-size: 11px;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: #cbd5e1;
 }
-
-.metric-risk-pill.critical { background: rgba(244, 63, 94, 0.2); color: #f43f5e; }
-.metric-risk-pill.high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-.metric-risk-pill.medium { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-.metric-risk-pill.low { background: rgba(52, 211, 153, 0.2); color: #34d399; }
 
 .metric-score-bar-wrap {
   width: 100%;
@@ -570,7 +616,6 @@
   background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 8px;
 }
 
 .metric-score-fill {
@@ -583,31 +628,6 @@
 .metric-score-fill.high { background: linear-gradient(90deg, #eab308, #f59e0b); }
 .metric-score-fill.medium { background: linear-gradient(90deg, #0284c7, #38bdf8); }
 .metric-score-fill.low { background: linear-gradient(90deg, #10b981, #34d399); }
-
-.metric-row-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.score-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.score-max {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.score-desc {
-  font-size: 10px;
-  color: #64748b;
-  font-family: 'JetBrains Mono', monospace;
-}
 
 /* Infrastructure Box */
 .telemetry-info-box {
@@ -659,7 +679,7 @@
   line-height: 1.5;
 }
 
-/* Connected Corridors Section */
+/* Connected Hubs Section */
 .telemetry-neighbors-section {
   display: flex;
   flex-direction: column;
@@ -793,12 +813,12 @@
 }
 
 /* ==========================================================================
-   Legend Bar
+   Legend Bar with Connection Type Samples
    ========================================================================== */
 .network-3d-legend {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-top: 14px;
   flex-wrap: wrap;
   padding-top: 12px;
@@ -809,7 +829,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -838,12 +858,31 @@
   line-height: 1;
 }
 
-.n3d-dash {
+/* Line samples for the 3 distinct connection styles */
+.n3d-line-sample {
   display: inline-block;
+  border-radius: 2px;
+}
+
+.n3d-line-sample.major {
+  width: 16px;
+  height: 2.5px;
+  background: #38bdf8;
+  opacity: 0.8;
+}
+
+.n3d-line-sample.local {
   width: 14px;
+  height: 1px;
+  background: #94a3b8;
+  opacity: 0.5;
+}
+
+.n3d-line-sample.intercon {
+  width: 18px;
   height: 2px;
   background: #38bdf8;
-  border-top: 1px dashed #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
 }
 
 /* ==========================================================================
