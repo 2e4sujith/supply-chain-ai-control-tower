@@ -85,11 +85,9 @@ export default function HolographicShipmentPanel({
   onNavigateDossier,
   onNavigateMap,
 }) {
-  if (!shipment) return null
-
   // Resolve origin and destination coordinates
-  const originHub = useMemo(() => resolveHubData(shipment.origin), [shipment.origin])
-  const destHub = useMemo(() => resolveHubData(shipment.destination), [shipment.destination])
+  const originHub = useMemo(() => (shipment ? resolveHubData(shipment.origin) : null), [shipment?.origin])
+  const destHub = useMemo(() => (shipment ? resolveHubData(shipment.destination) : null), [shipment?.destination])
 
   // Real distance computation
   const distanceKm = useMemo(() => {
@@ -101,21 +99,22 @@ export default function HolographicShipmentPanel({
 
   // Match active alert from alerts list
   const activeAlert = useMemo(() => {
-    if (!alerts || !Array.isArray(alerts)) return null
+    if (!alerts || !Array.isArray(alerts) || !shipment?.id) return null
     return alerts.find(
       (a) =>
         (a.shipment_id && a.shipment_id === shipment.id) ||
         (a.shipmentId && a.shipmentId === shipment.id)
     )
-  }, [alerts, shipment.id])
+  }, [alerts, shipment?.id])
 
   // Risk styling
-  const riskTier = shipment.risk || (shipment.riskScore >= 75 ? 'Critical' : shipment.riskScore >= 50 ? 'High' : shipment.riskScore >= 30 ? 'Medium' : 'Low')
-  const riskScore = typeof shipment.riskScore === 'number' ? shipment.riskScore : (shipment.risk_score || 0)
+  const riskTier = shipment?.risk || (shipment?.riskScore >= 75 ? 'Critical' : shipment?.riskScore >= 50 ? 'High' : shipment?.riskScore >= 30 ? 'Medium' : 'Low')
+  const riskScore = typeof shipment?.riskScore === 'number' ? shipment.riskScore : (shipment?.risk_score || 0)
   const riskClass = String(riskTier).toLowerCase()
 
   // AI Assistant Contextual Recommendation
   const aiInsight = useMemo(() => {
+    if (!shipment) return ''
     if (riskScore >= 75 || riskTier === 'Critical') {
       return 'Critical disruption detected in corridor. PureTreeSHAP attributes risk to port congestion and schedule slips. Autonomous Dijkstra diversion recommended.'
     }
@@ -126,7 +125,9 @@ export default function HolographicShipmentPanel({
       return 'Moderate schedule variance detected. Active corridor telemetry within operational buffer. Estimated arrival on schedule.'
     }
     return 'Optimal corridor trajectory. Real-time satellite AIS & highway sensors report nominal throughput and clear conditions.'
-  }, [riskScore, riskTier])
+  }, [shipment, riskScore, riskTier])
+
+  if (!shipment) return null
 
   return (
     <aside

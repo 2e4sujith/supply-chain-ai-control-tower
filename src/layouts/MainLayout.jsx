@@ -12,6 +12,7 @@ import {
   Settings,
   TriangleAlert,
   X,
+  Menu,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -33,6 +34,7 @@ function MainLayout() {
   const navigate = useNavigate()
   const [liveConnected, setLiveConnected] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [userProfile, setUserProfile] = useState({
     display_name: 'Alex Morgan',
     role: 'Operations Administrator',
@@ -148,17 +150,41 @@ function MainLayout() {
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [location.pathname])
+
   return (
     <div className={`app-shell ${userProfile.compact_density ? 'compact-mode' : ''}`}>
-      <aside className="sidebar">
-        <div className="brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }} title="SupplyChain AI Control Tower">
-          <div className="brand-mark">
-            <Command size={18} />
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="mobile-sidebar-backdrop"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-top-row">
+          <div className="brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }} title="SupplyChain AI Control Tower">
+            <div className="brand-mark">
+              <Command size={18} />
+            </div>
+            <div className="brand-text">
+              <span className="brand-title">SupplyChain <strong>AI</strong></span>
+              <span className="brand-subtitle">CONTROL TOWER</span>
+            </div>
           </div>
-          <div className="brand-text">
-            <span className="brand-title">SupplyChain <strong>AI</strong></span>
-            <span className="brand-subtitle">CONTROL TOWER</span>
-          </div>
+          <button
+            type="button"
+            className="mobile-sidebar-close"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
         </div>
         <div className="sidebar-label">COMMAND CENTER</div>
         <nav aria-label="Primary navigation">
@@ -184,6 +210,14 @@ function MainLayout() {
 
       <main className="main-content">
         <header className="topbar">
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={20} />
+          </button>
           <div className="page-heading">
             <span className="eyebrow">Enterprise Supply Chain / Operations</span>
             <h2>{currentPage}</h2>

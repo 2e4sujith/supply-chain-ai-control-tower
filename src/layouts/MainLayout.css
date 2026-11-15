@@ -502,9 +502,60 @@
     border: 0;
 }
 
-@media (max-width: 900px) {
+/* Mobile Hamburger Toggle & Backdrop */
+.mobile-hamburger-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.mobile-hamburger-btn:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+}
+
+.mobile-sidebar-close {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.mobile-sidebar-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+}
+
+.sidebar-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mobile-sidebar-backdrop {
+    display: none;
+}
+
+/* Tablet (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
     .sidebar {
-        width: 70px;
+        width: 72px;
         padding: 20px 8px;
     }
     .brand-text,
@@ -529,5 +580,71 @@
     }
     .search-box {
         width: 160px;
+    }
+}
+
+/* Mobile & Small Tablets (<= 768px: 360px, 390px, 768px) */
+@media (max-width: 768px) {
+    .mobile-hamburger-btn {
+        display: flex;
+    }
+
+    .mobile-sidebar-close {
+        display: flex;
+    }
+
+    .mobile-sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(4px);
+        z-index: 998;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 82vw;
+        z-index: 999;
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+        background: var(--bg-sidebar);
+    }
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .topbar {
+        padding: 0 12px;
+        height: 60px;
+    }
+
+    .page-heading h2 {
+        font-size: 16px;
+    }
+
+    .page-heading .eyebrow {
+        display: none;
+    }
+
+    .search-box {
+        display: none;
+    }
+
+    .live-connection-badge {
+        padding: 3px 8px;
+        font-size: 10px;
     }
 }

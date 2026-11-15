@@ -422,6 +422,7 @@ function DemoMap({
   const mapInstanceRef = useRef(null)
   const layersGroupRef = useRef(null)
   const lastFitKeyRef = useRef('')
+  const [currentZoom, setCurrentZoom] = useState(4)
   const [mapStyle, setMapStyle] = useState(() => {
     const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
     return isDark ? 'dark' : 'streets'
@@ -451,10 +452,11 @@ function DemoMap({
     const origin = shipment?.origin
     const dest = shipment?.destination
     if (!origin || !dest) return []
-    const curr = shipment?.currentLocation &&
-      !shipment.currentLocation.toLowerCase().includes('in transit') &&
-      !shipment.currentLocation.toLowerCase().includes('delivered')
-        ? shipment.currentLocation
+    const currLocStr = typeof shipment?.currentLocation === 'string' ? shipment.currentLocation : ''
+    const curr = currLocStr &&
+      !currLocStr.toLowerCase().includes('in transit') &&
+      !currLocStr.toLowerCase().includes('delivered')
+        ? currLocStr
         : null
     return [origin, curr, dest].filter(Boolean)
   }, [route?.current_route, route?.shipment_id, shipment?.origin, shipment?.destination, shipment?.currentLocation, shipment?.id])
@@ -741,6 +743,9 @@ function DemoMap({
           // ignore
         }
         mapInstanceRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current._leaflet_id = null
       }
       layersGroupRef.current = null
     }
@@ -1291,10 +1296,10 @@ function DemoMap({
             <strong>Route Coordinates Unresolved</strong>
             <p>
               {!origCoord && !destCoord
-                ? `Coordinates for both Origin "${shipment.origin}" and Destination "${shipment.destination}" are currently unavailable.`
+                ? `Coordinates for both Origin "${shipment?.origin || 'Unknown'}" and Destination "${shipment?.destination || 'Unknown'}" are currently unavailable.`
                 : !origCoord
-                ? `Origin coordinates for "${shipment.origin}" could not be resolved.`
-                : `Destination coordinates for "${shipment.destination}" could not be resolved.`}
+                ? `Origin coordinates for "${shipment?.origin || 'Unknown'}" could not be resolved.`
+                : `Destination coordinates for "${shipment?.destination || 'Unknown'}" could not be resolved.`}
               {' '}Fallback global route suppressed to maintain real map fidelity.
             </p>
           </div>

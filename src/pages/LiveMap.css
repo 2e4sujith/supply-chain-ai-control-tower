@@ -4,9 +4,9 @@
 
 .live-map-page {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1560px;
   margin: 0 auto;
-  padding: 28px 32px;
+  padding: clamp(14px, 2.5vw, 32px);
   box-sizing: border-box;
   color: #0f172a;
 }
@@ -1240,4 +1240,151 @@
   color: #64748b;
   gap: 10px;
   padding: 20px;
+}
+
+/* ==========================================================================
+   Comprehensive Responsive Dimensions (Mobile, Tablet, Laptop, Desktop)
+   ========================================================================== */
+
+/* Mobile (360px, 390px, and up to 768px) */
+@media (max-width: 768px) {
+  .live-map-page {
+    padding: 14px 12px;
+  }
+
+  .map-page-intro {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .map-page-intro h1 {
+    font-size: 20px;
+  }
+
+  .map-toolbar {
+    padding: 12px;
+    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-item {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .toolbar-search-wrap,
+  .toolbar-search-input,
+  .toolbar-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .objective-pills {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    gap: 4px;
+  }
+
+  .obj-pill {
+    padding: 6px 4px;
+    font-size: 10px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .map-badge-indicator {
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .what-if-btn {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+    box-sizing: border-box;
+  }
+
+  .map-workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .map-info-panel {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .objective-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dual-risk-strip {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .route-endpoints-card {
+    padding: 12px;
+  }
+
+  .corridor-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .what-if-drawer {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    padding: 16px 12px;
+  }
+
+  .what-if-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Tablet & Smaller Laptops (769px to 1120px: 768px, 1024px) */
+@media (min-width: 769px) and (max-width: 1120px) {
+  .map-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-select {
+    min-width: 180px;
+  }
+
+  .toolbar-search-input {
+    min-width: 160px;
+  }
+
+  .objective-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Standard & Large Laptops (1121px to 1439px: 1366px) */
+@media (min-width: 1121px) and (max-width: 1439px) {
+  .map-workspace {
+    grid-template-columns: 1fr 380px;
+  }
+}
+
+/* Large Desktops (1440px and above) */
+@media (min-width: 1440px) {
+  .map-workspace {
+    grid-template-columns: 1fr 420px;
+    gap: 24px;
+  }
 }

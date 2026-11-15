@@ -28,10 +28,13 @@ import {
   Plane,
   Ship,
   ShieldCheck,
+  Package,
+  MapPin,
 } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { getAlternativeRoute, getShipments, predictRisk, predictGNNRisk, simulateWhatIf } from '../services/api.js'
 import DemoMap from '../components/DemoMap.jsx'
+import ErrorBoundary from '../components/ErrorBoundary.jsx'
 import { geocodeAddress } from '../services/geocoding.js'
 import './LiveMap.css'
 
@@ -790,38 +793,46 @@ function LiveMap() {
       <section className="map-workspace">
         {/* Left: Real Geographic Interactive Corridor Map (Leaflet & OpenStreetMap) */}
         <div className="map-col-left">
-          <DemoMap
-            shipment={shipment}
-            allShipments={filteredShipments}
-            onSelectShipment={(id) => {
-              setSelectedId(id)
-              setFeedback('')
-              setRoute(null)
-              setPendingRecommendation(null)
-              setRisk(null)
-              setGnnRisk(null)
-              setWhatIfResult(null)
-            }}
-            route={route}
-            criterion={criterion}
-            alternativeRoute={Boolean(route)}
-            originLocation={originLocation}
-            destinationLocation={destinationLocation}
-            currentLocationObj={currentLocationObj}
-          />
+          <ErrorBoundary
+            title="Interactive Map View Error"
+            resetLabel="Reload Map"
+            minHeight="580px"
+          >
+            <DemoMap
+              shipment={shipment}
+              allShipments={filteredShipments}
+              onSelectShipment={(id) => {
+                setSelectedId(id)
+                setFeedback('')
+                setRoute(null)
+                setPendingRecommendation(null)
+                setRisk(null)
+                setGnnRisk(null)
+                setWhatIfResult(null)
+              }}
+              route={route}
+              criterion={criterion}
+              alternativeRoute={Boolean(route)}
+              originLocation={originLocation}
+              destinationLocation={destinationLocation}
+              currentLocationObj={currentLocationObj}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Right: Shipment & Routing Action Panel (approx 32% width) */}
         <aside className="map-info-panel">
-          <div className="map-panel-heading">
-            <div>
-              <span className="eyebrow">ACTIVE SHIPMENT</span>
-              <h2>{shipment.id}</h2>
-            </div>
-            <span className={`map-risk ${getRiskBadgeClass(risk?.risk_level ?? shipment.risk)}`}>
-              {risk?.risk_level ?? shipment.risk}
-            </span>
-          </div>
+          {shipment ? (
+            <>
+              <div className="map-panel-heading">
+                <div>
+                  <span className="eyebrow">ACTIVE SHIPMENT</span>
+                  <h2>{shipment.id}</h2>
+                </div>
+                <span className={`map-risk ${getRiskBadgeClass(risk?.risk_level ?? shipment.risk)}`}>
+                  {risk?.risk_level ?? shipment.risk}
+                </span>
+              </div>
 
           <div className="map-status-card">
             <span className="status-check">
@@ -1241,7 +1252,40 @@ function LiveMap() {
                 </div>
               </div>
             )}
+            </div>
+          </>
+        ) : (
+          <div className="empty-selection-panel" style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b' }}>
+            <Package size={36} style={{ margin: '0 auto 12px', color: '#94a3b8' }} />
+            <strong style={{ display: 'block', fontSize: '14px', color: '#0f172a', marginBottom: '4px' }}>
+              No Shipment Selected
+            </strong>
+            <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.5 }}>
+              {searchQuery
+                ? `No shipments match "${searchQuery}". Clear your search filter to inspect corridor details.`
+                : 'Select an active shipment from the network to view telemetry and routes.'}
+            </p>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  marginTop: '12px',
+                  padding: '6px 14px',
+                  background: '#e0f2fe',
+                  color: '#0284c7',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Clear Search Filter
+              </button>
+            )}
           </div>
+        )}
         </aside>
       </section>
     </div>
